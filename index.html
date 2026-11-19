@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Digital Den · Order Logger (Beta)</title>
+<title>Digital Den · Order Logger</title>
 <style>
   :root { --dark:#075e54; --mid:#128c7e; --light:#25d366; --bg:#eef1f0; --line:#d7dddb; --err:#c62828; --ok:#2e7d32; --warn:#b26a00; }
   * { box-sizing:border-box; }
@@ -32,6 +32,8 @@
   .hint { font-size:13px; color:#5b6866; margin:0 0 10px; }
   textarea.paste { width:100%; min-height:130px; border:1.5px dashed #9fb7b2; border-radius:8px; padding:10px; font:14px/1.45 inherit; background:#fbfdfc; resize:vertical; }
   .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px 14px; }
+  .sect { font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--dark); margin:4px 0 8px; padding-bottom:5px; border-bottom:2px solid #d5ebe4; }
+  .sect.msg { margin-top:28px; color:#0c5f7a; border-bottom-color:#cfe6ef; }
   .field label { display:block; font-size:12.5px; font-weight:600; color:#40514e; margin-bottom:3px; }
   .field input, .field select { width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:7px; font:inherit; background:#fff; }
   .field input:focus { outline:2px solid #9be0d0; border-color:var(--mid); }
@@ -88,7 +90,7 @@
   .ccard h3 { margin:0; font-size:17px; }
   .ccard .left { font-size:30px; font-weight:800; color:var(--err); font-variant-numeric:tabular-nums; }
   .ccard.zero .left { color:var(--ok); }
-  .ccard.extra { border-top-color:#fb8c00; } .ccard.extra .left { color:#e65100; }
+  .ccard.extra { border-top-color:#7b1fa2; background:#faf5fc; } .ccard.extra .left { color:#7b1fa2; }
   .ccard .meta { font-size:13px; color:#5b6866; margin-bottom:8px; }
   .ccard details { margin-top:8px; font-size:13.5px; }
   .ccard summary { cursor:pointer; color:var(--mid); font-weight:600; }
@@ -105,7 +107,7 @@
 <header>
   <div class="who">
     <div class="avatar">DD</div>
-    <div><h1 class="brand">Digital Den<span class="beta">BETA</span></h1><small id="fileStatus">Not connected. Press Connect</small></div>
+    <div><h1 class="brand">Digital Den</h1><small id="fileStatus">Not connected. Press Connect</small></div>
   </div>
   <div class="hright">
     <div class="seg" id="dealerSeg"></div>
@@ -115,9 +117,9 @@
 </header>
 <nav>
   <button data-tab="orders" class="active">Orders <span class="badge" id="incCount">0</span></button>
-  <button data-tab="ofd">Out for delivery <span class="badge" id="ofdCount">0</span></button>
-  <button data-tab="pay">Dealer payments</button>
-  <button data-tab="clients">Clients</button>
+  <button data-tab="ofd">Out For Delivery <span class="badge" id="ofdCount">0</span></button>
+  <button data-tab="pay">Dealer Payments</button>
+  <button data-tab="clients">Clients Payments</button>
   <button data-tab="profit">Profit</button>
 </nav>
 
@@ -138,7 +140,7 @@
     <div id="modeBar" class="mode" style="display:none"></div>
     <h2 id="formTitle">New order</h2>
     <p class="hint">Click a box to pick from past entries, or type something new.</p>
-    <div class="grid" id="orderForm"></div>
+    <div id="orderForm"></div>
     <div class="actions">
       <button class="btn" id="btnSaveOrder">Save new order</button>
       <button class="btn ghost" id="btnClearOrder">Clear form</button>
@@ -150,7 +152,7 @@
 <!-- ============ OUT FOR DELIVERY ============ -->
 <section class="tab" id="tab-ofd">
   <div class="panel">
-    <h2>Out for delivery</h2>
+    <h2>Out For Delivery</h2>
     <p class="hint">Press Delivered when the parcel arrives. If a client's card paid for it, the amount is added to that client's payments.</p>
     <div id="ofdList"><div class="empty">Press Connect to see the list.</div></div>
     <div id="ofdNote"></div>
@@ -272,17 +274,19 @@ const PAYMENT_COLS = { date:"V", sender:"W", bank:"X", amount:"Y" };
 const OFD = "Out for Delivery", DELIVERED = "Delivered", ORDERED = "Ordered";
 const DONE_STATUSES = ["delivered", "out for delivery", "returned", "cancelled"];
 
-const ORDER_FIELDS = [   // [key, label, type, required]
+const ORDER_FIELDS = [   // [key, label, type, required, wide]   manual details first
   ["date", "Order date", "date", true], ["by", "Order placed by", "text", true], ["platform", "Platform", "text", true],
   ["card", "Card details", "text"], ["paid_by", "Amount paid by", "text", true],
   ["model", "Model", "text"], ["qty", "Quantity", "number"],
   ["amount", "Amount", "number", true], ["return", "Return amount", "number", true], ["commission", "Commission", "number"],
   ["commission_cut", "Commission cut", "number"], ["have_to_return", "I have to return", "number"],
   ["cashback", "Cashback", "number"], ["bulk_extra", "Bulk extra", "number"],
+  ["status", "Delivery status", "text"], ["delivery_date", "Delivery date", "date"],
+  // filled from the out-for-delivery message
   ["name", "Parcel name", "text"], ["mobile", "Mobile no", "text"], ["pin", "Pin code", "text"],
-  ["address", "Address", "text", false, true], ["tracking", "Tracking ID", "text"],
-  ["status", "Delivery status", "text"], ["delivery_date", "Delivery date", "date"]
+  ["tracking", "Tracking ID", "text"], ["address", "Address", "text", false, true]
 ];
+const MSG_FIELDS = new Set(["name", "mobile", "pin", "tracking", "address"]);
 const PAY_FIELDS = [["date", "Payment date", "date", true], ["sender", "Sender", "text", true], ["bank", "Bank", "text", true], ["amount", "Amount got", "number", true]];
 const NO_LIST = new Set(["date", "delivery_date", "qty", "pin", "tracking", "mobile", "commission", "have_to_return"]);
 const DEFAULT_LISTS = { status: [ORDERED, OFD, DELIVERED, "Returned", "Cancelled"], platform: ["Flipkart", "Amazon", "Rupay Transaction"] };
@@ -463,7 +467,6 @@ function learnDealer(sh) {
     }
   }
   D.money = { toGet, got, due: toGet - got };
-  D.incomplete.reverse();
   return D;
 }
 
@@ -527,10 +530,18 @@ function learn() {
 
 /* ======================= order form ======================= */
 function buildForm(container, fields, prefix) {
-  $(container).innerHTML = fields.map(([k, label, type, req, wide]) =>
-    `<div class="field${wide ? " wide" : ""}" id="f-${prefix}${k}"><label class="${req ? "req" : ""}" for="${prefix}${k}">${label}</label>
+  const html = f => fieldHtml(f, prefix);
+  if (container === "orderForm") {
+    $(container).innerHTML = `<div class="sect">Details you fill in yourself</div><div class="grid">${fields.filter(f => !MSG_FIELDS.has(f[0])).map(html).join("")}</div>
+      <div class="sect msg">Details from the out-for-delivery message</div><div class="grid">${fields.filter(f => MSG_FIELDS.has(f[0])).map(html).join("")}</div>`;
+    return;
+  }
+  $(container).innerHTML = fields.map(html).join("");
+}
+function fieldHtml([k, label, type, req, wide], prefix) {
+  return `<div class="field${wide ? " wide" : ""}" id="f-${prefix}${k}"><label class="${req ? "req" : ""}" for="${prefix}${k}">${label}</label>
      <input id="${prefix}${k}" type="${type === "date" ? "date" : "text"}" ${type === "number" ? 'inputmode="decimal"' : ""} ${NO_LIST.has(k) ? "" : `list="dl-${prefix}${k}"`} autocomplete="off">
-     ${k === "pin" ? '<small>Picks the saved address for this pin</small>' : ""}${k === "commission" ? '<small>Return − Amount. Type any two of the three</small>' : ""}${k === "have_to_return" ? '<small>Amount + Commission cut. Fill either one</small>' : ""}${k === "paid_by" ? '<small>Whose card paid. Links to the Clients tab</small>' : ""}</div>`).join("");
+     ${k === "pin" ? '<small>Picks the saved address for this pin</small>' : ""}${k === "commission" ? '<small>Return − Amount. Type any two of the three</small>' : ""}${k === "have_to_return" ? '<small>Amount + Commission cut. Fill either one</small>' : ""}${k === "paid_by" ? '<small>Whose card paid. Links to Clients Payments</small>' : ""}</div>`;
 }
 buildForm("orderForm", ORDER_FIELDS, "o.");
 buildForm("payForm", PAY_FIELDS, "p.");
@@ -816,8 +827,8 @@ function addClientTxn(S, dealerKey, row) {
   if (!paidBy || OWNERS.includes(normName(paidBy))) return null;
   const blocks = parseClients(S.clients), b = blocks.find(x => normName(x.name) === normName(paidBy));
   const amt = (num(sh.value(row, ORDER_COLS.amount)) || 0) + (num(sh.value(row, ORDER_COLS.commission_cut)) || 0);
-  if (!b) return { ok: false, text: `${paidBy} isn't in Payment Details yet, so ₹${amt} wasn't added. Add them on the Clients tab.` };
-  if (b.legacy || !b.odCol) return { ok: false, text: `Payment Details needs the one-time upgrade (Clients tab) before amounts can be added for ${paidBy}.` };
+  if (!b) return { ok: false, text: `${paidBy} isn't in Payment Details yet, so ₹${amt} wasn't added. Add them on the Clients Payments tab.` };
+  if (b.legacy || !b.odCol) return { ok: false, text: `Payment Details needs the one-time upgrade (Clients Payments tab) before amounts can be added for ${paidBy}.` };
   const cl = S.clients, last = cl.lastRow([b.odCol, b.amtCol]), r = last + 1, style = last >= FIRST_DATA_ROW ? last : 0;
   cl.set(r, b.odCol, sh.date(row, ORDER_COLS.date) || today(), style);
   cl.set(r, b.amtCol, amt, style);
@@ -973,14 +984,14 @@ function renderClients() {
   const total = C.reduce((s, b) => s + b.left, 0);
   $("clientsLeft").textContent = inr(C.reduce((s, b) => s + Math.max(0, b.left), 0));
   const adv = C.reduce((s, b) => s + Math.max(0, -b.left), 0);
-  $("clientsSub").textContent = `${C.filter(b => Math.round(b.left) > 0).length} of ${C.length} clients still have money to get.` + (adv ? ` You've given ${inr(adv)} extra in advance (net ${inr(total)}).` : "");
+  $("clientsSub").textContent = `${C.filter(b => Math.round(b.left) > 0).length} of ${C.length} clients still have money to get.` + (adv ? ` You will get back ${inr(adv)} from clients you gave extra (net ${inr(total)}).` : "");
   $("clientCards").innerHTML = C.map((b, i) => {
     const zero = Math.round(b.left) === 0, extra = Math.round(b.left) < 0;
     const rows = b.entries.map(e => `<tr><td>${fmtDate(e.od)}</td><td class="num">${e.amt !== null ? inr(e.amt) : ""}</td><td class="num">${e.given !== null ? inr(e.given) : ""}</td><td>${esc(fmtDate(e.gdate))}</td></tr>`).join("");
     return `<div class="ccard ${zero ? "zero" : extra ? "extra" : ""}">
       <h3>${esc(b.name)}</h3>
-      <div class="left">${extra ? inr(-b.left) : inr(b.left)}</div>
-      <div class="meta">${extra ? "given extra (advance)" : "left to give"} · owed ${inr(b.owed)} · given ${inr(b.given)} · ${b.entries.filter(e => e.amt !== null).length} transactions</div>
+      <div class="left">${inr(b.left)}</div>
+      <div class="meta">${extra ? "you will get this back" : "left to give"} · owed ${inr(b.owed)} · given ${inr(b.given)} · ${b.entries.filter(e => e.amt !== null).length} transactions</div>
       <div class="btns" style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn small" data-pay="${i}">Pay</button>
         <button class="btn small ghost" data-stmt="${i}">Share statement</button>
@@ -1083,7 +1094,7 @@ $("btnAddClient").addEventListener("click", () => { $("acName").value = ""; $("a
 $("acSave").addEventListener("click", async () => {
   const name = $("acName").value.trim(); if (!name) { note("acNote", "err", "Type the client's name."); return; }
   if (L.clients.some(b => normName(b.name) === normName(name))) { note("acNote", "err", `${name} already exists.`); return; }
-  if (L.clientsLegacy) { note("acNote", "err", "Do the one-time upgrade on the Clients tab first."); return; }
+  if (L.clientsLegacy) { note("acNote", "err", "Do the one-time upgrade on the Clients Payments tab first."); return; }
   try {
     await withData(S => {
       const cl = S.clients, blocks = parseClients(cl), prev = blocks[blocks.length - 1];
