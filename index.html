@@ -60,6 +60,7 @@
   .mode { display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:#e7f3f8; color:#0c5f7a; border-radius:8px; padding:9px 12px; margin-bottom:12px; font-weight:600; }
   .inc { display:flex; flex-direction:column; gap:6px; }
   .incrow { display:flex; align-items:center; gap:10px; border:1px solid var(--line); border-radius:9px; padding:8px 10px; cursor:pointer; background:#fbfdfc; }
+  .incrow .tick { width:20px; height:20px; accent-color:var(--mid); flex:none; cursor:pointer; }
   .incrow:hover { border-color:var(--mid); }
   .incrow.sel { border:2px solid var(--mid); background:#effaf5; }
   .incrow.cand { border-color:#fb8c00; background:#fff8ec; }
@@ -125,13 +126,14 @@
   <button data-tab="pay">Dealer Payments</button>
   <button data-tab="clients">Clients Payments</button>
   <button data-tab="profit">Profit</button>
+  <button data-tab="track">Tracking Search</button>
 </nav>
 
 <!-- ============ ORDERS ============ -->
 <section class="tab active" id="tab-orders">
   <div class="panel">
     <h2>Orders Waiting For Delivery Details</h2>
-    <p class="hint">Rows saved when you ordered, still missing delivery details. Tap one, then paste its out-for-delivery message.</p>
+    <p class="hint">Rows saved when you ordered, still missing delivery details. Tap one, then paste its out-for-delivery message. If several phones came in one package, tick every row in that package.</p>
     <div id="incList" class="inc"><div class="empty">Press Connect to see your orders.</div></div>
   </div>
   <div class="panel">
@@ -199,8 +201,21 @@
 <section class="tab" id="tab-profit">
   <div class="panel">
     <h2 id="profitTitle">Month-Wise Profit</h2>
-    <p class="hint">By order date. Profit = Commission + Cashback + Bulk extra. Net profit = Profit − Commission cut.</p>
+    <p class="hint">Delivered orders only, by order date. Profit = Commission + Cashback + Bulk extra. Net profit = Profit − Commission cut.</p>
     <div id="profitBox"><div class="empty">Press Connect to see your profits.</div></div>
+  </div>
+</section>
+
+<!-- ============ TRACKING SEARCH ============ -->
+<section class="tab" id="tab-track">
+  <div class="panel">
+    <h2>Tracking ID Search</h2>
+    <p class="hint">Searches every dealer's sheet. Part of an ID works too. If the same ID is on more than one row, all of them are shown.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input id="trackQ" placeholder="Type or paste a tracking ID" autocomplete="off" style="flex:1;min-width:220px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font:inherit">
+      <button class="btn" id="btnTrack">Search</button>
+    </div>
+    <div id="trackOut"></div>
   </div>
 </section>
 
@@ -461,7 +476,7 @@ function learnDealer(sh) {
     if (!DONE_STATUSES.includes(st)) D.incomplete.push(r);
     if (st === OFD.toLowerCase()) D.ofd.push(r);
     if (r.tracking) { const t = r.tracking.trim().toUpperCase(); (D.tracking[t] = D.tracking[t] || []).push(r); }
-    if (r.dateObj) {
+    if (r.dateObj && st === "delivered") {
       const cb = num(r.cashback) || 0, bx = num(r.bulk_extra) || 0, cut = num(r.commission_cut) || 0;
       if (amt || com || cb || bx || cut) {
         const key = `${r.dateObj.getFullYear()}-${String(r.dateObj.getMonth() + 1).padStart(2, "0")}`;
@@ -562,6 +577,8 @@ function refreshDatalists() {
 }
 
 let editRow = null;        // row number being completed, or null for a new order
+let ticked = new Set();    // other rows in the same package (same message, different cards)
+let pkgQty = 0;            // phones in the package, from the message
 let editOrig = null;       // that row's values when loaded
 let trioOrder = [];
 
@@ -590,16 +607,20 @@ function resetOrderForm(keepPaste) {
   field("o.", "status").value = ORDERED;
   field("o.", "qty").value = "1";
   if (!keepPaste) { $("pasteBox").value = ""; $("pasteNote").innerHTML = ""; }
-  trioOrder = []; editRow = null; editOrig = null;
+  trioOrder = []; editRow = null; editOrig = null; ticked = new Set(); pkgQty = 0;
   updateMode(); markMissing();
 }
 function updateMode() {
   if (editRow) {
     $("modeBar").style.display = "flex";
-    $("modeBar").innerHTML = `✏️ Completing row ${editRow} of ${esc(DEALERS[dealer].name)}'s sheet <button class="btn small ghost" id="btnCancelEdit">Cancel</button>`;
+    const rows = [editRow, ...[...ticked].sort((a, b) => a - b)];
+    const pk = rows.length > 1 || pkgQty > 1;
+    $("modeBar").innerHTML = `✏️ Completing ${rows.length > 1 ? `rows ${rows.join(", ")}` : `row ${editRow}`} of ${esc(DEALERS[dealer].name)}'s sheet` +
+      (pk ? ` <span style="font-weight:500">· package ${pkgQty ? `of ${pkgQty} phone${pkgQty > 1 ? "s" : ""}` : ""} · ${rows.length} row${rows.length > 1 ? "s" : ""} ticked${pkgQty && rows.length !== pkgQty ? ` <b style="color:var(--err)">(tick ${pkgQty - rows.length > 0 ? pkgQty - rows.length + " more" : rows.length - pkgQty + " fewer"})</b>` : ""}</span>` : "") +
+      ` <button class="btn small ghost" id="btnCancelEdit">Cancel</button>`;
     $("btnCancelEdit").onclick = () => { resetOrderForm(); renderIncomplete(); };
-    $("formTitle").textContent = `Complete Row ${editRow}`;
-    $("btnSaveOrder").textContent = `Update row ${editRow}`;
+    $("formTitle").textContent = rows.length > 1 ? `Complete Rows ${rows.join(", ")}` : `Complete Row ${editRow}`;
+    $("btnSaveOrder").textContent = rows.length > 1 ? `Update ${rows.length} rows` : `Update row ${editRow}`;
   } else {
     $("modeBar").style.display = "none";
     $("formTitle").textContent = "New Order";
@@ -698,20 +719,26 @@ function parseOfdMessage(text) {
   return { data: out, unknown };
 }
 let lastPaste = null;
+const sameModel = (a, b) => { const x = normModel(a), y = normModel(b); return x && y && (x === y || x.includes(y) || y.includes(x)); };
 function applyPaste() {
   const text = $("pasteBox").value; if (!text.trim()) { lastPaste = null; return; }
   const { data, unknown } = parseOfdMessage(text);
   if (!Object.keys(data).length) { note("pasteNote", "err", "Couldn't find Parcel Name, Model, Tracking etc. in that text."); return; }
   lastPaste = data;
   const D = L.dealers[dealer] || { incomplete: [], tracking: {} };
-  // a saved order with this tracking ID? open it
+  pkgQty = Math.max(1, parseInt(String(data.qty || "1").replace(/\D/g, ""), 10) || 1);
+  // saved orders with this tracking ID? open them (all of them for a package)
   if (!editRow && data.tracking) {
-    const hit = D.incomplete.find(r => String(r.tracking || "").trim().toUpperCase() === data.tracking.trim().toUpperCase());
-    if (hit) { selectRow(hit.row); return; }
+    const hits = D.incomplete.filter(r => String(r.tracking || "").trim().toUpperCase() === data.tracking.trim().toUpperCase());
+    if (hits.length) { selectRow(hits[0].row, hits.slice(1).map(r => r.row)); return; }
+  }
+  // a package of several phones: open the first matching order and tick the rest
+  if (!editRow && pkgQty > 1 && data.model) {
+    const same = D.incomplete.filter(r => r.model && sameModel(r.model, data.model) && !r.tracking);
+    if (same.length) { selectRow(same[0].row, same.slice(1, pkgQty).map(r => r.row)); return; }
   }
   const notes = [];
   for (const k of ["name", "tracking", "pin"]) if (data[k] && !field("o.", k).readOnly) setField(k, data[k], true);
-  if (data.qty && !field("o.", "qty").readOnly) setField("qty", data.qty.replace(/\D/g, "") || "1", true);
   if (data.model) {
     if (field("o.", "model").readOnly && editRow) {
       const rowModel = field("o.", "model").value;
@@ -727,23 +754,26 @@ function applyPaste() {
   if (!field("o.", "delivery_date").value) setField("delivery_date", today());
   if (unknown.length) notes.push({ kind: "warn", html: `Ignored: ${unknown.map(esc).join(", ")}` });
   if (!editRow) {
-    const cands = D.incomplete.filter(r => data.model && r.model && (normModel(r.model) === normModel(data.model) || normModel(r.model).includes(normModel(data.model)) || normModel(data.model).includes(normModel(r.model))));
+    const cands = D.incomplete.filter(r => data.model && r.model && sameModel(r.model, data.model));
     renderIncomplete(cands.map(r => r.row));
     if (cands.length) notes.unshift({ kind: "warn", html: `👆 ${cands.length === 1 ? "This looks like" : "This could be one of"} your saved order${cands.length > 1 ? "s" : ""}: ` +
       cands.map(r => `<button class="btn small pick" data-row="${r.row}">Row ${r.row} · ${fmtDate(r.dateObj)} · ${esc(r.card || "no card")}</button>`).join("") + `<br>Tap the right one, or ignore this to save it as a new row.` });
     if (data.tracking && D.tracking[data.tracking.trim().toUpperCase()]) notes.push({ kind: "warn", html: `⚠ Tracking ${esc(data.tracking)} is already in the sheet. You'll be asked what to do when you save.` });
   }
-  notes.unshift({ kind: "ok", html: editRow ? `✔ Message added to row ${editRow}. Check the boxes and press Update.` : "✔ Filled from the message." });
+  if (pkgQty > 1) notes.push({ kind: "info", html: `📦 This package has <b>${pkgQty} phones</b>. Each phone is its own row with Quantity 1. ${editRow ? `Tick ${pkgQty} rows in the list above (each row keeps its own card and amount), then press Update.` : "Save each phone's order first, then paste this message again."}` });
+  notes.unshift({ kind: "ok", html: editRow ? `✔ Message added to ${ticked.size ? `rows ${[editRow, ...ticked].join(", ")}` : `row ${editRow}`}. Check the boxes and press Update.` : "✔ Filled from the message." });
+  updateMode();
   $("pasteNote").innerHTML = notes.map(n => `<div class="note ${n.kind}">${n.html}</div>`).join("");
 }
 $("pasteBox").addEventListener("input", () => { applyPaste(); markMissing(); });
 
 /* ---- open an incomplete row ---- */
-function selectRow(n) {
+function selectRow(n, extra = []) {
   const r = (L.dealers[dealer] || { rows: {} }).rows[n];
   if (!r) return;
+  const keepQty = pkgQty;
   resetOrderForm(true); note("orderNote");
-  editRow = n; editOrig = r;
+  editRow = n; editOrig = r; ticked = new Set(extra.filter(x => x !== n)); pkgQty = keepQty;
   const vals = { ...r, date: r.dateObj, delivery_date: r.deliveryObj };
   for (const [k] of ORDER_FIELDS) {
     if (["pin", "have_to_return", "status"].includes(k)) continue;
@@ -752,6 +782,7 @@ function selectRow(n) {
   }
   for (const k of ["card", "paid_by", "model", "amount", "date", "by", "platform"]) if (field("o.", k).value) lockField(k, `row ${n}`);
   field("o.", "status").value = r.status || ORDERED;
+  field("o.", "qty").value = "1";
   trioOrder = ["amount", "return"].filter(k => field("o.", k).value);
   updateTotals();
   updateMode(); renderIncomplete();
@@ -783,7 +814,9 @@ function renderIncomplete(cands = []) {
   if (!D || !D.incomplete.length) { $("incList").innerHTML = `<div class="empty">No orders waiting. Everything has delivery details.</div>`; return; }
   $("incList").innerHTML = D.incomplete.map(r => {
     const days = r.dateObj ? Math.round((today() - r.dateObj) / 86400000) : null;
-    return `<div class="incrow ${r.row === editRow ? "sel" : ""} ${cands.includes(r.row) ? "cand" : ""}" data-row="${r.row}">
+    const on = r.row === editRow || ticked.has(r.row);
+    return `<div class="incrow ${on ? "sel" : ""} ${cands.includes(r.row) ? "cand" : ""}" data-row="${r.row}">
+      <input type="checkbox" class="tick" data-tick="${r.row}" ${on ? "checked" : ""} title="Same package: tick every row in it">
       <span class="rowno">Row ${r.row}</span>
       <div class="incinfo"><b>${esc(r.model || r.platform || "No model")}</b> · ₹${esc(r.amount || "-")}<br>
         <span class="sub">${fmtDate(r.dateObj)}${days !== null ? ` (${days}d ago)` : ""} · ${esc(r.by || "")} · ${esc(r.card || "no card")}${r.tracking ? " · " + esc(r.tracking) : ""}</span></div>
@@ -806,6 +839,16 @@ $("incList").addEventListener("click", async e => {
       });
       note("pasteNote", "ok", `✔ Tracking added to row ${n}. When its out-for-delivery message comes, it will match by itself.`);
     } catch (err) { note("pasteNote", "err", esc(err.message)); }
+    return;
+  }
+  const tk = e.target.closest("[data-tick]");
+  if (tk) {
+    e.stopPropagation();
+    const n = +tk.dataset.tick;
+    if (!editRow) { selectRow(n); return; }
+    if (n === editRow) { tk.checked = true; return; }
+    if (tk.checked) ticked.add(n); else ticked.delete(n);
+    updateMode(); renderIncomplete();
     return;
   }
   const row = e.target.closest(".incrow"); if (row) selectRow(+row.dataset.row);
@@ -883,7 +926,8 @@ $("btnSaveOrder").addEventListener("click", async () => {
         if (normModel(sh.value(row, ORDER_COLS.model)) !== normModel(editOrig.model) || normName(sh.value(row, ORDER_COLS.card)) !== normName(editOrig.card))
           throw new Error(`Row ${row} was changed since you opened it. Clear the form and open it again.`);
         if (data.tracking) {
-          const others = sh.findTracking(data.tracking).filter(x => x !== row);
+          const pkg = new Set([row, ...ticked]);
+          const others = sh.findTracking(data.tracking).filter(x => !pkg.has(x));
           if (others.length && !confirm(`Tracking ${data.tracking} is also on row ${others.join(", ")}. Save anyway?`)) return { save: false, cancelled: true };
         }
       } else {
@@ -897,14 +941,26 @@ $("btnSaveOrder").addEventListener("click", async () => {
         }
         if (!row) { row = sh.lastRow(KEY_COLS) + 1; styleRow = row - 1; }
       }
+      data.qty = 1;
       writeOrderRow(sh, data, row, styleRow);
-      let client = null;
-      if (String(data.status || "").toLowerCase() === "delivered" && prevStatus.toLowerCase() !== "delivered") client = addClientTxn(S, dealer, row);
-      return { row, client };
+      const delivered = String(data.status || "").toLowerCase() === "delivered";
+      const clients = [];
+      if (delivered && prevStatus.toLowerCase() !== "delivered") clients.push(addClientTxn(S, dealer, row));
+      // other rows in the same package: same delivery details, each keeps its own card and amount
+      const extra = updating ? [...ticked].sort((a, b) => a - b) : [];
+      for (const n of extra) {
+        const before = String(sh.value(n, ORDER_COLS.status) || "");
+        for (const f of ["name", "mobile", "address", "tracking", "status", "delivery_date"]) if (f in data) sh.set(n, ORDER_COLS[f], data[f]);
+        sh.set(n, ORDER_COLS.qty, 1);
+        if (delivered && before.toLowerCase() !== "delivered") clients.push(addClientTxn(S, dealer, n));
+      }
+      return { row, extra, clients: clients.filter(Boolean) };
     });
     if (res.cancelled) { note("orderNote", "warn", "Nothing was saved."); return; }
     remember("o.", data); refreshDatalists();
-    note("orderNote", "ok", `✔ ${updating ? "Updated" : "Saved"} row ${res.row} in ${esc(DEALERS[dealer].name)}'s sheet: ${esc(data.model || data.platform)}, ${esc(data.status || "")}.` + (res.client ? `<br>${res.client.ok ? "✔" : "⚠"} ${esc(res.client.text)}` : ""));
+    const rowsTxt = res.extra && res.extra.length ? `rows ${[res.row, ...res.extra].join(", ")}` : `row ${res.row}`;
+    note("orderNote", "ok", `✔ ${updating ? "Updated" : "Saved"} ${rowsTxt} in ${esc(DEALERS[dealer].name)}'s sheet: ${esc(data.model || data.platform)}, ${esc(data.status || "")}.` +
+      (res.clients || []).map(c => `<br>${c.ok ? "✔" : "⚠"} ${esc(c.text)}`).join(""));
     resetOrderForm(); renderIncomplete();
   } catch (e) { note("orderNote", "err", esc(e.message)); }
   finally { $("btnSaveOrder").disabled = false; }
@@ -912,33 +968,45 @@ $("btnSaveOrder").addEventListener("click", async () => {
 $("btnClearOrder").addEventListener("click", () => { resetOrderForm(); note("orderNote"); renderIncomplete(); });
 
 /* ======================= out for delivery tab ======================= */
+function ofdGroups(D) {
+  const groups = [], byT = {};
+  for (const o of D.ofd) {
+    const t = String(o.tracking || "").trim().toUpperCase();
+    if (t && byT[t]) { byT[t].rows.push(o); continue; }
+    const g = { tracking: o.tracking || "", rows: [o] }; groups.push(g); if (t) byT[t] = g;
+  }
+  return groups;
+}
 function renderOfd() {
   const D = L.dealers[dealer];
-  $("ofdCount").textContent = D ? D.ofd.length : 0;
+  $("ofdCount").textContent = D ? ofdGroups(D).length : 0;
   if (!connected || !D) return;
   if (!D.ofd.length) { $("ofdList").innerHTML = `<div class="empty">Nothing is out for delivery right now.</div>`; return; }
   $("ofdList").innerHTML = `<div class="scroll"><table class="list"><tr><th>Row</th><th class="opt">Order date</th><th>Parcel</th><th>Model</th><th class="opt">Paid by</th><th class="opt">Tracking</th><th>Delivered on</th><th></th></tr>` +
-    D.ofd.map(o => `<tr><td>${o.row}</td><td class="opt">${fmtDate(o.dateObj)}</td><td>${esc(o.name || "")}</td><td>${esc(o.model || "")}</td><td class="opt">${esc(o.paid_by || "")}</td><td class="opt">${esc(o.tracking || "")}</td>
-      <td><input type="date" value="${isoDate(today())}" id="dd-${o.row}"></td><td><button class="btn small" data-row="${o.row}" data-tracking="${esc(o.tracking || "")}">Delivered</button></td></tr>`).join("") + `</table></div>`;
+    ofdGroups(D).map((g, i) => { const o = g.rows[0], many = g.rows.length > 1;
+      return `<tr><td>${g.rows.map(r => r.row).join(", ")}</td><td class="opt">${fmtDate(o.dateObj)}</td><td>${esc(o.name || "")}${many ? `<br><b>📦 ${g.rows.length} phones</b>` : ""}</td>
+      <td>${esc([...new Set(g.rows.map(r => r.model || ""))].join(", "))}</td><td class="opt">${esc(g.rows.map(r => r.paid_by || "").join(", "))}</td><td class="opt">${esc(g.tracking)}</td>
+      <td><input type="date" value="${isoDate(today())}" id="dd-${i}"></td><td><button class="btn small" data-g="${i}" data-rows="${g.rows.map(r => r.row).join(",")}" data-tracking="${esc(g.tracking)}">${many ? `Delivered (${g.rows.length})` : "Delivered"}</button></td></tr>`; }).join("") + `</table></div>`;
 }
 $("ofdList").addEventListener("click", async e => {
-  const b = e.target.closest("button[data-row]"); if (!b) return;
-  const row = +b.dataset.row, tracking = b.dataset.tracking, day = $("dd-" + row).value;
+  const b = e.target.closest("button[data-rows]"); if (!b) return;
+  const rows = b.dataset.rows.split(",").map(Number), tracking = b.dataset.tracking, day = $("dd-" + b.dataset.g).value;
   b.disabled = true;
   try {
     const res = await withData(S => {
-      const sh = S[dealer]; let r = row;
-      if (String(sh.value(r, ORDER_COLS.tracking) || "").trim().toUpperCase() !== tracking.trim().toUpperCase()) {
-        const hits = sh.findTracking(tracking).filter(n => String(sh.value(n, ORDER_COLS.status) || "").toLowerCase() === OFD.toLowerCase());
-        if (hits.length !== 1) throw new Error(`Couldn't find tracking ${tracking} any more. Nothing changed.`);
-        r = hits[0];
+      const sh = S[dealer], done = [], clients = [];
+      for (const r of rows) {
+        if (String(sh.value(r, ORDER_COLS.tracking) || "").trim().toUpperCase() !== tracking.trim().toUpperCase()) throw new Error(`Row ${r} changed since the list was shown. Nothing was saved; refresh and try again.`);
+        if (String(sh.value(r, ORDER_COLS.status) || "").toLowerCase() === "delivered") continue;
+        sh.set(r, ORDER_COLS.status, DELIVERED);
+        sh.set(r, ORDER_COLS.delivery_date, day ? fromIso(day) : today());
+        done.push(r);
+        const c = addClientTxn(S, dealer, r); if (c) clients.push(c);
       }
-      if (String(sh.value(r, ORDER_COLS.status) || "").toLowerCase() === "delivered") throw new Error(`Row ${r} is already Delivered.`);
-      sh.set(r, ORDER_COLS.status, DELIVERED);
-      sh.set(r, ORDER_COLS.delivery_date, day ? fromIso(day) : today());
-      return { row: r, client: addClientTxn(S, dealer, r) };
+      if (!done.length) throw new Error("These rows are already Delivered.");
+      return { done, clients };
     });
-    note("ofdNote", "ok", `✔ Row ${res.row} marked Delivered.` + (res.client ? `<br>${res.client.ok ? "✔" : "⚠"} ${esc(res.client.text)}` : ""));
+    note("ofdNote", "ok", `✔ Row${res.done.length > 1 ? "s" : ""} ${res.done.join(", ")} marked Delivered.` + res.clients.map(c => `<br>${c.ok ? "✔" : "⚠"} ${esc(c.text)}`).join(""));
   } catch (err) { note("ofdNote", "err", esc(err.message)); b.disabled = false; }
 });
 
@@ -1176,6 +1244,32 @@ async function migrateClients() {
     note("clientNote", "ok", `✔ Payment Details upgraded. Order dates filled for ${res.filled} amounts${res.missing ? `; ${res.missing} older amounts had no matching order and are left blank` : ""}.`);
   } catch (e) { note("clientNote", "err", esc(e.message)); if ($("btnMigrate")) $("btnMigrate").disabled = false; }
 }
+
+/* ======================= tracking search ======================= */
+const TRACK_FIELDS = [["date", "Order Date"], ["by", "Order Placed By"], ["platform", "Platform"], ["model", "Model"], ["qty", "Quantity"], ["card", "Card Details"],
+  ["paid_by", "Amount Paid By"], ["amount", "Amount"], ["return", "Return Amount"], ["commission", "Commission"], ["commission_cut", "Commission Cut"],
+  ["status", "Delivery Status"], ["delivery_date", "Delivery Date"], ["name", "Parcel Name"], ["mobile", "Mobile No"], ["address", "Address"], ["tracking", "Tracking ID"]];
+async function searchTracking() {
+  const q = $("trackQ").value.trim().toUpperCase().replace(/\s+/g, "");
+  if (q.length < 4) { note("trackOut", "warn", "Type at least 4 characters of the tracking ID."); return; }
+  note("trackOut", "info", "Searching…");
+  try { await withData(() => ({ save: false })); } catch (e) { note("trackOut", "err", esc(e.message)); return; }
+  const hits = [];
+  for (const [k, D] of Object.entries(L.dealers)) for (const r of Object.values(D.rows))
+    if (r.tracking && r.tracking.toUpperCase().replace(/\s+/g, "").includes(q)) hits.push({ dealer: k, r });
+  if (!hits.length) { note("trackOut", "warn", `No row has a tracking ID containing <b>${esc(q)}</b>.`); return; }
+  const ids = new Set(hits.map(h => h.r.tracking.trim().toUpperCase()));
+  const dup = hits.length > 1;
+  $("trackOut").innerHTML = (dup ? `<div class="note warn">Found on <b>${hits.length} rows</b>${ids.size === 1 ? " with the same tracking ID (same package or a duplicate entry)" : ` across ${ids.size} tracking IDs`}.</div>` : `<div class="note ok">Found 1 row.</div>`) +
+    hits.map(({ dealer: k, r }) => {
+      const v = { ...r, date: fmtDate(r.dateObj), delivery_date: fmtDate(r.deliveryObj) };
+      return `<div class="panel" style="margin:10px 0;border-left:4px solid var(--mid)">
+        <h2>${esc(DEALERS[k].name)} · Row ${r.row}</h2>
+        <table class="list">${TRACK_FIELDS.filter(([f]) => v[f] !== null && v[f] !== undefined && v[f] !== "").map(([f, lab]) => `<tr><td style="color:#5b6866;width:38%">${lab}</td><td><b>${esc(v[f])}</b></td></tr>`).join("")}</table>
+      </div>`; }).join("");
+}
+$("btnTrack").addEventListener("click", searchTracking);
+$("trackQ").addEventListener("keydown", e => { if (e.key === "Enter") searchTracking(); });
 
 /* ======================= dealer picker, tabs, render ======================= */
 function renderDealerSeg() {
