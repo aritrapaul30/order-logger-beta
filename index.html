@@ -219,14 +219,14 @@
 <dialog id="dlgPayClient">
   <h3 id="pcTitle">Pay Client</h3>
   <div class="grid">
-    <div class="field"><label class="req" for="pcAmount">Amount given</label><input id="pcAmount" inputmode="decimal" autocomplete="off"></div>
+    <div class="field"><label class="req" for="pcAmount">Amount Given</label><input id="pcAmount" inputmode="decimal" autocomplete="off"></div>
     <div class="field"><label class="req" for="pcDate">Date</label><input id="pcDate" type="date"></div>
   </div>
   <div class="radio">
     <label><input type="radio" name="pcMethod" value="paid" checked> Paid (cash / UPI / bank)</label>
     <label><input type="radio" name="pcMethod" value="cut"> Settled via dealer cut</label>
   </div>
-  <div class="field" id="pcDealerBox" style="display:none"><label for="pcDealer">Deducted from which dealer's payment</label><select id="pcDealer"></select></div>
+  <div class="field" id="pcDealerBox" style="display:none"><label for="pcDealer">Deducted From Which Dealer's Payment</label><select id="pcDealer"></select></div>
   <div id="pcNote"></div>
   <div class="row"><button class="btn ghost" data-close>Cancel</button><button class="btn" id="pcSave">Save</button></div>
 </dialog>
@@ -234,7 +234,7 @@
 <dialog id="dlgAddClient">
   <h3>Add A Client</h3>
   <p class="hint">Use the exact name you type in "Amount paid by", so their orders link automatically.</p>
-  <div class="field"><label class="req" for="acName">Client name</label><input id="acName" autocomplete="off"></div>
+  <div class="field"><label class="req" for="acName">Client Name</label><input id="acName" autocomplete="off"></div>
   <div id="acNote"></div>
   <div class="row"><button class="btn ghost" data-close>Cancel</button><button class="btn" id="acSave">Add client</button></div>
 </dialog>
@@ -242,8 +242,8 @@
 <dialog id="dlgConnect">
   <h3>Connect Your Google Sheets</h3>
   <p class="hint">Paste the beta web app URL and access key, or just open your setup link.</p>
-  <div class="field"><label for="gUrl">Web app URL</label><input id="gUrl" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off"></div>
-  <div class="field" style="margin-top:8px"><label for="gKey">Access key</label><input id="gKey" autocomplete="off"></div>
+  <div class="field"><label for="gUrl">Web App URL</label><input id="gUrl" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off"></div>
+  <div class="field" style="margin-top:8px"><label for="gKey">Access Key</label><input id="gKey" autocomplete="off"></div>
   <div id="gNote"></div>
   <div class="row"><button class="btn ghost" id="gDisconnect">Disconnect</button><button class="btn ghost" data-close>Close</button><button class="btn" id="gSave">Connect</button></div>
 </dialog>
@@ -279,18 +279,18 @@ const OFD = "Out for Delivery", DELIVERED = "Delivered", ORDERED = "Ordered";
 const DONE_STATUSES = ["delivered", "out for delivery", "returned", "cancelled"];
 
 const ORDER_FIELDS = [   // [key, label, type, required, wide]   manual details first
-  ["date", "Order date", "date", true], ["by", "Order placed by", "text", true], ["platform", "Platform", "text", true],
+  ["date", "Order Date", "date", true], ["by", "Order Placed By", "text", true], ["platform", "Platform", "text", true],
   ["model", "Model", "text"], ["qty", "Quantity", "number"],
-  ["card", "Card details", "text"], ["paid_by", "Amount paid by", "text", true],
-  ["amount", "Amount", "number", true], ["return", "Return amount", "number", true], ["commission", "Commission", "number"],
-  ["commission_cut", "Commission cut", "number"], ["have_to_return", "I have to return", "number"],
-  ["cashback", "Cashback", "number"], ["bulk_extra", "Bulk extra", "number"], ["status", "Delivery status", "text"],
+  ["card", "Card Details", "text"], ["paid_by", "Amount Paid By", "text", true],
+  ["amount", "Amount", "number", true], ["return", "Return Amount", "number", true], ["commission", "Commission", "number"],
+  ["commission_cut", "Commission Cut", "number"], ["have_to_return", "I Have To Return", "number"],
+  ["cashback", "Cashback", "number"], ["bulk_extra", "Bulk Extra", "number"], ["status", "Delivery Status", "text"],
   // filled from the out-for-delivery message
-  ["name", "Parcel name", "text"], ["mobile", "Mobile no", "text"], ["tracking", "Tracking ID", "text"],
-  ["delivery_date", "Delivery date", "date"], ["pin", "Pin code", "text"], ["address", "Address", "text", false, true]
+  ["name", "Parcel Name", "text"], ["mobile", "Mobile No", "text"], ["tracking", "Tracking ID", "text"],
+  ["delivery_date", "Delivery Date", "date"], ["pin", "Pin Code", "text"], ["address", "Address", "text", false, true]
 ];
 const MSG_FIELDS = new Set(["name", "mobile", "pin", "tracking", "delivery_date", "address"]);
-const PAY_FIELDS = [["date", "Payment date", "date", true], ["sender", "Sender", "text", true], ["bank", "Bank", "text", true], ["amount", "Amount got", "number", true]];
+const PAY_FIELDS = [["date", "Payment Date", "date", true], ["sender", "Sender", "text", true], ["bank", "Bank", "text", true], ["amount", "Amount Got", "number", true]];
 const NO_LIST = new Set(["date", "delivery_date", "qty", "pin", "tracking", "mobile", "commission", "have_to_return"]);
 const DEFAULT_LISTS = { status: [ORDERED, OFD, DELIVERED, "Returned", "Cancelled"], platform: ["Flipkart", "Amazon", "Rupay Transaction"] };
 const LABELS = Object.fromEntries(ORDER_FIELDS.map(f => [f[0], f[1]]));
