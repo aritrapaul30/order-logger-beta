@@ -34,6 +34,10 @@
   .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px 14px; }
   .sect { font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--dark); margin:4px 0 8px; padding-bottom:5px; border-bottom:2px solid #d5ebe4; }
   .sect.msg { margin-top:28px; color:#0c5f7a; border-bottom-color:#cfe6ef; }
+  .hidden { display:none !important; }
+  .field.missing input { background:#fdecea; border-color:#ef9a9a; }
+  .field.missing label { color:#c62828; }
+  .field.missing label::after { content:" · missing"; font-weight:500; font-size:11.5px; }
   .field label { display:block; font-size:12.5px; font-weight:600; color:#40514e; margin-bottom:3px; }
   .field input, .field select { width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:7px; font:inherit; background:#fff; }
   .field input:focus { outline:2px solid #9be0d0; border-color:var(--mid); }
@@ -126,19 +130,19 @@
 <!-- ============ ORDERS ============ -->
 <section class="tab active" id="tab-orders">
   <div class="panel">
-    <h2>Orders waiting for delivery details</h2>
+    <h2>Orders Waiting For Delivery Details</h2>
     <p class="hint">Rows saved when you ordered, still missing delivery details. Tap one, then paste its out-for-delivery message.</p>
     <div id="incList" class="inc"><div class="empty">Press Connect to see your orders.</div></div>
   </div>
   <div class="panel">
-    <h2>Paste the "Out for delivery" message</h2>
+    <h2>Paste The "Out For Delivery" Message</h2>
     <p class="hint">Leave this empty when you're saving a new order right after placing it.</p>
     <textarea class="paste" id="pasteBox" placeholder="TODAY OUT FOR DELIVERY&#10;▪️ Parcel Name👉🏻 ...&#10;▪️ Model Name👉🏻 ...&#10;▪️ Tracking👉🏻 ...&#10;▪️ Quantity 👉🏻 ...&#10;▪️ OTP👉🏻 ...&#10;▪️ Phone No 👉🏻 ...&#10;▪️ Pin Code 👉🏻 ..."></textarea>
     <div id="pasteNote"></div>
   </div>
   <div class="panel">
     <div id="modeBar" class="mode" style="display:none"></div>
-    <h2 id="formTitle">New order</h2>
+    <h2 id="formTitle">New Order</h2>
     <p class="hint">Click a box to pick from past entries, or type something new.</p>
     <div id="orderForm"></div>
     <div class="actions">
@@ -167,7 +171,7 @@
     <div class="sub" id="dueSub">Press Connect to see the amount.</div>
   </div>
   <div class="panel">
-    <h2>Payment received from the dealer</h2>
+    <h2>Payment Received From The Dealer</h2>
     <p class="hint">Goes into the dealer sheet's payment columns (Payment date, Sender, Bank, Got).</p>
     <div class="grid" id="payForm"></div>
     <div class="actions"><button class="btn" id="btnAddPay">Add to sheet</button><button class="btn ghost" id="btnClearPay">Clear</button></div>
@@ -179,7 +183,7 @@
 <section class="tab" id="tab-clients">
   <div id="migrateBox"></div>
   <div class="duebox owe">
-    <div class="lbl">You still have to give clients</div>
+    <div class="lbl">You Still Have To Give Clients</div>
     <div class="amt" id="clientsLeft">₹ –</div>
     <div class="sub" id="clientsSub">Press Connect to see the amount.</div>
   </div>
@@ -194,7 +198,7 @@
 <!-- ============ PROFIT ============ -->
 <section class="tab" id="tab-profit">
   <div class="panel">
-    <h2 id="profitTitle">Month-wise profit</h2>
+    <h2 id="profitTitle">Month-Wise Profit</h2>
     <p class="hint">By order date. Profit = Commission + Cashback + Bulk extra. Net profit = Profit − Commission cut.</p>
     <div id="profitBox"><div class="empty">Press Connect to see your profits.</div></div>
   </div>
@@ -203,7 +207,7 @@
 <div id="datalists"></div>
 
 <dialog id="dlgDup">
-  <h3>Tracking ID already in the sheet</h3>
+  <h3>Tracking ID Already In The Sheet</h3>
   <div id="dupText"></div>
   <div class="row">
     <button class="btn ghost" data-v="cancel">Cancel</button>
@@ -213,7 +217,7 @@
 </dialog>
 
 <dialog id="dlgPayClient">
-  <h3 id="pcTitle">Pay client</h3>
+  <h3 id="pcTitle">Pay Client</h3>
   <div class="grid">
     <div class="field"><label class="req" for="pcAmount">Amount given</label><input id="pcAmount" inputmode="decimal" autocomplete="off"></div>
     <div class="field"><label class="req" for="pcDate">Date</label><input id="pcDate" type="date"></div>
@@ -228,7 +232,7 @@
 </dialog>
 
 <dialog id="dlgAddClient">
-  <h3>Add a client</h3>
+  <h3>Add A Client</h3>
   <p class="hint">Use the exact name you type in "Amount paid by", so their orders link automatically.</p>
   <div class="field"><label class="req" for="acName">Client name</label><input id="acName" autocomplete="off"></div>
   <div id="acNote"></div>
@@ -236,7 +240,7 @@
 </dialog>
 
 <dialog id="dlgConnect">
-  <h3>Connect your Google Sheets</h3>
+  <h3>Connect Your Google Sheets</h3>
   <p class="hint">Paste the beta web app URL and access key, or just open your setup link.</p>
   <div class="field"><label for="gUrl">Web app URL</label><input id="gUrl" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off"></div>
   <div class="field" style="margin-top:8px"><label for="gKey">Access key</label><input id="gKey" autocomplete="off"></div>
@@ -276,17 +280,16 @@ const DONE_STATUSES = ["delivered", "out for delivery", "returned", "cancelled"]
 
 const ORDER_FIELDS = [   // [key, label, type, required, wide]   manual details first
   ["date", "Order date", "date", true], ["by", "Order placed by", "text", true], ["platform", "Platform", "text", true],
-  ["card", "Card details", "text"], ["paid_by", "Amount paid by", "text", true],
   ["model", "Model", "text"], ["qty", "Quantity", "number"],
+  ["card", "Card details", "text"], ["paid_by", "Amount paid by", "text", true],
   ["amount", "Amount", "number", true], ["return", "Return amount", "number", true], ["commission", "Commission", "number"],
   ["commission_cut", "Commission cut", "number"], ["have_to_return", "I have to return", "number"],
-  ["cashback", "Cashback", "number"], ["bulk_extra", "Bulk extra", "number"],
-  ["status", "Delivery status", "text"], ["delivery_date", "Delivery date", "date"],
+  ["cashback", "Cashback", "number"], ["bulk_extra", "Bulk extra", "number"], ["status", "Delivery status", "text"],
   // filled from the out-for-delivery message
-  ["name", "Parcel name", "text"], ["mobile", "Mobile no", "text"], ["pin", "Pin code", "text"],
-  ["tracking", "Tracking ID", "text"], ["address", "Address", "text", false, true]
+  ["name", "Parcel name", "text"], ["mobile", "Mobile no", "text"], ["tracking", "Tracking ID", "text"],
+  ["delivery_date", "Delivery date", "date"], ["pin", "Pin code", "text"], ["address", "Address", "text", false, true]
 ];
-const MSG_FIELDS = new Set(["name", "mobile", "pin", "tracking", "address"]);
+const MSG_FIELDS = new Set(["name", "mobile", "pin", "tracking", "delivery_date", "address"]);
 const PAY_FIELDS = [["date", "Payment date", "date", true], ["sender", "Sender", "text", true], ["bank", "Bank", "text", true], ["amount", "Amount got", "number", true]];
 const NO_LIST = new Set(["date", "delivery_date", "qty", "pin", "tracking", "mobile", "commission", "have_to_return"]);
 const DEFAULT_LISTS = { status: [ORDERED, OFD, DELIVERED, "Returned", "Cancelled"], platform: ["Flipkart", "Amazon", "Rupay Transaction"] };
@@ -444,12 +447,13 @@ const hasKey = (sh, n) => KEY_COLS.some(c => { const v = sh.value(n, c); return 
 
 function learnDealer(sh) {
   const D = { rows: {}, incomplete: [], ofd: [], tracking: {}, months: {}, money: null };
-  let toGet = 0, got = 0;
+  let toGet = 0, got = 0, pending = 0;
   const nums = [...sh.rows.keys()].filter(n => n >= 2).sort((a, b) => a - b);
   for (const n of nums) {
     const amt = n >= FIRST_DATA_ROW ? (num(sh.value(n, ORDER_COLS.amount)) || 0) : 0;
     const com = n >= FIRST_DATA_ROW ? (num(sh.value(n, COMMISSION_COL)) || 0) : 0;   // Google sends the calculated value
-    toGet += amt + com;
+    const delivered = String(sh.value(n, ORDER_COLS.status) || "").trim().toLowerCase() === "delivered";
+    if (delivered) toGet += amt + com; else pending += amt + com;
     got += num(sh.value(n, PAYMENT_COLS.amount)) || 0;
     if (n < FIRST_DATA_ROW || !hasKey(sh, n)) continue;
     const r = readOrderRow(sh, n); D.rows[n] = r;
@@ -466,7 +470,7 @@ function learnDealer(sh) {
       }
     }
   }
-  D.money = { toGet, got, due: toGet - got };
+  D.money = { toGet, got, due: toGet - got, pending };
   return D;
 }
 
@@ -532,14 +536,14 @@ function learn() {
 function buildForm(container, fields, prefix) {
   const html = f => fieldHtml(f, prefix);
   if (container === "orderForm") {
-    $(container).innerHTML = `<div class="sect">Details you fill in yourself</div><div class="grid">${fields.filter(f => !MSG_FIELDS.has(f[0])).map(html).join("")}</div>
-      <div class="sect msg">Details from the out-for-delivery message</div><div class="grid">${fields.filter(f => MSG_FIELDS.has(f[0])).map(html).join("")}</div>`;
+    $(container).innerHTML = `<div class="sect">Details You Fill In Yourself</div><div class="grid">${fields.filter(f => !MSG_FIELDS.has(f[0])).map(html).join("")}</div>
+      <div class="sect msg">Details From The Out-For-Delivery Message</div><div class="grid">${fields.filter(f => MSG_FIELDS.has(f[0])).map(html).join("")}</div>`;
     return;
   }
   $(container).innerHTML = fields.map(html).join("");
 }
 function fieldHtml([k, label, type, req, wide], prefix) {
-  return `<div class="field${wide ? " wide" : ""}" id="f-${prefix}${k}"><label class="${req ? "req" : ""}" for="${prefix}${k}">${label}</label>
+  return `<div class="field${wide ? " wide" : ""}${k === "pin" ? " hidden" : ""}" id="f-${prefix}${k}"><label class="${req ? "req" : ""}" for="${prefix}${k}">${label}</label>
      <input id="${prefix}${k}" type="${type === "date" ? "date" : "text"}" ${type === "number" ? 'inputmode="decimal"' : ""} ${NO_LIST.has(k) ? "" : `list="dl-${prefix}${k}"`} autocomplete="off">
      ${k === "pin" ? '<small>Picks the saved address for this pin</small>' : ""}${k === "commission" ? '<small>Return − Amount. Type any two of the three</small>' : ""}${k === "have_to_return" ? '<small>Amount + Commission cut. Fill either one</small>' : ""}${k === "paid_by" ? '<small>Whose card paid. Links to Clients Payments</small>' : ""}</div>`;
 }
@@ -587,18 +591,18 @@ function resetOrderForm(keepPaste) {
   field("o.", "qty").value = "1";
   if (!keepPaste) { $("pasteBox").value = ""; $("pasteNote").innerHTML = ""; }
   trioOrder = []; editRow = null; editOrig = null;
-  updateMode();
+  updateMode(); markMissing();
 }
 function updateMode() {
   if (editRow) {
     $("modeBar").style.display = "flex";
     $("modeBar").innerHTML = `✏️ Completing row ${editRow} of ${esc(DEALERS[dealer].name)}'s sheet <button class="btn small ghost" id="btnCancelEdit">Cancel</button>`;
     $("btnCancelEdit").onclick = () => { resetOrderForm(); renderIncomplete(); };
-    $("formTitle").textContent = `Complete row ${editRow}`;
+    $("formTitle").textContent = `Complete Row ${editRow}`;
     $("btnSaveOrder").textContent = `Update row ${editRow}`;
   } else {
     $("modeBar").style.display = "none";
-    $("formTitle").textContent = "New order";
+    $("formTitle").textContent = "New Order";
     $("btnSaveOrder").textContent = "Save new order";
   }
 }
@@ -720,6 +724,7 @@ function applyPaste() {
   if (!field("o.", "platform").value) setField("platform", guessPlatform(data.tracking));
   const st = field("o.", "status").value.trim().toLowerCase();
   if (!st || st === ORDERED.toLowerCase()) field("o.", "status").value = OFD;
+  if (!field("o.", "delivery_date").value) setField("delivery_date", today());
   if (unknown.length) notes.push({ kind: "warn", html: `Ignored: ${unknown.map(esc).join(", ")}` });
   if (!editRow) {
     const cands = D.incomplete.filter(r => data.model && r.model && (normModel(r.model) === normModel(data.model) || normModel(r.model).includes(normModel(data.model)) || normModel(data.model).includes(normModel(r.model))));
@@ -731,7 +736,7 @@ function applyPaste() {
   notes.unshift({ kind: "ok", html: editRow ? `✔ Message added to row ${editRow}. Check the boxes and press Update.` : "✔ Filled from the message." });
   $("pasteNote").innerHTML = notes.map(n => `<div class="note ${n.kind}">${n.html}</div>`).join("");
 }
-$("pasteBox").addEventListener("input", applyPaste);
+$("pasteBox").addEventListener("input", () => { applyPaste(); markMissing(); });
 
 /* ---- open an incomplete row ---- */
 function selectRow(n) {
@@ -751,8 +756,25 @@ function selectRow(n) {
   updateTotals();
   updateMode(); renderIncomplete();
   applyPaste();
+  markMissing();
   $("orderForm").scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
+/* red tint on the boxes an incomplete row still needs */
+const NEEDED = ["date", "by", "platform", "model", "card", "paid_by", "amount", "return", "name", "mobile", "tracking", "delivery_date", "address"];
+function markMissing() {
+  for (const [k] of ORDER_FIELDS) $("f-o." + k).classList.remove("missing");
+  if (!editRow) return;
+  const rupay = /rupay/i.test(field("o.", "platform").value);
+  for (const k of NEEDED) {
+    if (rupay && ["model", "name", "mobile", "tracking", "address"].includes(k)) continue;
+    if (!field("o.", k).value.trim()) $("f-o." + k).classList.add("missing");
+  }
+  const st = field("o.", "status").value.trim().toLowerCase();
+  if (!st || st === ORDERED.toLowerCase()) $("f-o.status").classList.add("missing");
+}
+$("orderForm").addEventListener("input", () => { if (editRow) markMissing(); });
+$("orderForm").addEventListener("change", () => { if (editRow) markMissing(); });
 
 function renderIncomplete(cands = []) {
   const D = L.dealers[dealer];
@@ -923,12 +945,13 @@ $("ofdList").addEventListener("click", async e => {
 /* ======================= dealer payments + profit ======================= */
 function renderMoney() {
   const D = L.dealers[dealer]; if (!D) return;
-  const { toGet, got, due } = D.money;
-  $("dueLbl").textContent = `Payment still due from ${DEALERS[dealer].name}`;
+  const { toGet, got, due, pending } = D.money;
+  $("dueLbl").textContent = `Payment Still Due From ${DEALERS[dealer].name}`;
   $("dueAmt").textContent = inr(due); $("dueAmt").classList.toggle("neg", due < 0);
   const all = Object.values(L.dealers).reduce((s, d) => s + d.money.due, 0);
-  $("dueSub").textContent = `Total to get ${inr(toGet)} − received ${inr(got)} (after last year's due). All dealers together: ${inr(all)}`;
-  $("profitTitle").textContent = `Month-wise profit · ${DEALERS[dealer].name}`;
+  $("dueSub").textContent = `Delivered orders ${inr(toGet)} − received ${inr(got)} (after last year's due). All dealers together: ${inr(all)}.` +
+    (pending ? ` Not counted yet: ${inr(pending)} for orders that aren't delivered.` : "");
+  $("profitTitle").textContent = `Month-Wise Profit · ${DEALERS[dealer].name}`;
   const months = D.months, keys = Object.keys(months).sort().reverse();
   if (!keys.length) { $("profitBox").innerHTML = `<div class="empty">No orders with amounts yet.</div>`; return; }
   const net = m => m.com + m.cb + m.bx - m.cut;
@@ -977,7 +1000,7 @@ $("btnClearPay").addEventListener("click", () => { resetPayForm(); note("payNote
 function renderClients() {
   if (!connected) return;
   const C = L.clients;
-  $("migrateBox").innerHTML = L.clientsLegacy ? `<div class="panel" style="border:2px solid #fb8c00"><h2>One-time upgrade of Payment Details</h2>
+  $("migrateBox").innerHTML = L.clientsLegacy ? `<div class="panel" style="border:2px solid #fb8c00"><h2>One-Time Upgrade Of Payment Details</h2>
     <p class="hint">Adds an <b>Order Date</b> column before each client's payments and renames <b>Payments</b> to <b>Transaction Amount</b>. Existing amounts get their order date filled in where it can be matched to an order.</p>
     <button class="btn warn" id="btnMigrate">Upgrade the sheet</button><div id="migNote"></div></div>` : "";
   if ($("btnMigrate")) $("btnMigrate").onclick = migrateClients;
