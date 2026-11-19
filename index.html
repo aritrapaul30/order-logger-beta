@@ -19,6 +19,11 @@
   .seg { display:inline-flex; background:rgba(255,255,255,.14); border-radius:20px; padding:3px; }
   .seg button { background:none; border:0; color:#d9f3ee; font:inherit; font-weight:700; padding:6px 13px; border-radius:17px; cursor:pointer; }
   .seg button.on { background:#fff; color:var(--dark); }
+  .yearsel { background:rgba(255,255,255,.14); color:#fff; border:0; border-radius:18px; padding:7px 10px; font:inherit; font-weight:700; cursor:pointer; }
+  .yearsel option { color:#15201e; }
+  .yearbar { max-width:1000px; margin:0 auto 14px; border-radius:10px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; font-weight:600; }
+  .yearbar.new { background:#e8f5e9; border:2px solid #43a047; color:#1b5e20; }
+  .yearbar.old { background:#fff8e1; border:2px solid #ffb300; color:#6d4c00; }
   header .hbtn { background:rgba(255,255,255,.14); color:#fff; border:0; border-radius:18px; padding:7px 13px; font:inherit; font-size:13.5px; cursor:pointer; }
   header .hbtn.primary { background:var(--light); color:#063; font-weight:700; }
   nav { display:flex; background:var(--mid); padding:0 6px; overflow-x:auto; }
@@ -115,6 +120,7 @@
     <div><h1 class="brand">Digital Den</h1><small id="fileStatus">Not connected. Press Connect</small></div>
   </div>
   <div class="hright">
+    <select id="yearSel" class="yearsel" title="Year"></select>
     <div class="seg" id="dealerSeg"></div>
     <button class="hbtn primary" id="btnConnect">Connect</button>
     <button class="hbtn" id="btnSettings">Shortcuts</button>
@@ -131,6 +137,7 @@
 
 <!-- ============ ORDERS ============ -->
 <section class="tab active" id="tab-orders">
+  <div class="yearbanner"></div>
   <div class="panel">
     <h2>Orders Waiting For Delivery Details</h2>
     <p class="hint">Rows saved when you ordered, still missing delivery details. Tap one, then paste its out-for-delivery message. If several phones came in one package, tick every row in that package.</p>
@@ -167,6 +174,7 @@
 
 <!-- ============ DEALER PAYMENTS ============ -->
 <section class="tab" id="tab-pay">
+  <div class="yearbanner"></div>
   <div class="duebox">
     <div class="lbl" id="dueLbl">Payment still due to you</div>
     <div class="amt" id="dueAmt">₹ –</div>
@@ -178,6 +186,12 @@
     <div class="grid" id="payForm"></div>
     <div class="actions"><button class="btn" id="btnAddPay">Add to sheet</button><button class="btn ghost" id="btnClearPay">Clear</button></div>
     <div id="payNote"></div>
+  </div>
+  <div class="panel">
+    <h2>New Year Sheets</h2>
+    <p class="hint">Creates next year's folder with a fresh sheet for each dealer (same layout, no orders), and carries this year's LEFT over as a negative "Previous Year Due". Payment Details stays one file.</p>
+    <button class="btn ghost" id="btnNewYear">Start next year</button>
+    <div id="yearNote"></div>
   </div>
 </section>
 
@@ -372,14 +386,17 @@ function remember(prefix, data) {
 let remote = null; try { remote = JSON.parse(lsGet("remote", "null")); } catch (e) {}
 let dealer = lsGet("dealer", "rahul"); if (!DEALERS[dealer]) dealer = "rahul";
 let DATA = null;        // last read: { rahul, sourav, clients, history } -> { values, name }
+let year = lsGet("year", "");   // "" = latest year folder
+let YEARS = [], MISSING = [];
 let connected = false;
 
 async function api(req, cfg = remote) {
   let r;
-  try { r = await fetch(cfg.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ ...req, key: cfg.key }) }); }
+  try { r = await fetch(cfg.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ year, ...req, key: cfg.key }) }); }
   catch (e) { throw new Error("Couldn't reach your Google Sheets. Check the internet connection and try again."); }
   let j; try { j = await r.json(); } catch (e) { throw new Error("The web app link didn't answer properly. Check it under Connect."); }
   if (!j.ok) throw new Error(j.error || "Google Sheets error");
+  if (j.years) { YEARS = j.years; MISSING = j.missing || []; if (j.year && year && j.year !== year) { year = j.year; lsSet("year", year); } renderYear(); }
   return j;
 }
 
@@ -1285,13 +1302,49 @@ document.querySelectorAll("nav button").forEach(b => b.addEventListener("click",
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.id === "tab-" + b.dataset.tab));
 }));
 
+/* ======================= years ======================= */
+function latestYear() { return YEARS.length ? YEARS[YEARS.length - 1] : ""; }
+function shownYear() { return year && YEARS.includes(year) ? year : latestYear(); }
+function renderYear() {
+  $("yearSel").innerHTML = YEARS.map(y => `<option value="${y}" ${y === shownYear() ? "selected" : ""}>${y}</option>`).join("");
+  $("yearSel").style.display = YEARS.length ? "" : "none";
+  const cal = String(new Date().getFullYear()), last = latestYear(), shown = shownYear();
+  let html = "";
+  if (last && +cal > +last) html = `<div class="yearbar new">🎉 It's ${cal}. Start the ${cal} sheets? This year's LEFT carries over as "Previous Year Due". <button class="btn small" data-newyear="${cal}">Start ${cal}</button></div>`;
+  else if (shown && shown !== last) html = `<div class="yearbar old">You're looking at ${shown}. New orders go into the ${shown} sheets. <button class="btn small ghost" data-year="${last}">Go to ${last}</button></div>`;
+  if (MISSING.length) html += `<div class="yearbar old">Not found in Drive: ${esc(MISSING.join(", "))}. Check the "Digital Den" folder.</div>`;
+  document.querySelectorAll(".yearbanner").forEach(el => el.innerHTML = html);
+  if (last) $("btnNewYear").textContent = `Start ${+last + 1}`;
+}
+async function switchYear(y) {
+  year = y; lsSet("year", y); resetOrderForm(); note("orderNote");
+  $("fileStatus").textContent = `Loading ${y}…`;
+  try { await withData(() => ({ save: false })); setStatus(); } catch (e) { $("fileStatus").textContent = "Couldn't load: " + e.message; }
+}
+$("yearSel").addEventListener("change", e => switchYear(e.target.value));
+document.addEventListener("click", e => {
+  const y = e.target.dataset && e.target.dataset.year; if (y) switchYear(y);
+  const ny = e.target.dataset && e.target.dataset.newyear; if (ny) startYear(ny);
+});
+$("btnNewYear").addEventListener("click", () => startYear(String(+latestYear() + 1)));
+async function startYear(to) {
+  if (!confirm(`Create the ${to} folder with new Rahul and Sourav sheets?\n\n${latestYear()}'s LEFT will be carried over as "Previous Year Due". ${latestYear()}'s sheets are not changed.`)) return;
+  note("yearNote", "info", `Creating ${to}… this can take up to a minute.`);
+  try {
+    const j = await api({ action: "newYear", to });
+    DATA = j.data; year = j.year; lsSet("year", year); renderYear(); learn(); setStatus();
+    note("yearNote", "ok", `✔ ${to} is ready. New orders now go into the ${to} sheets.`);
+  } catch (e) { note("yearNote", "err", esc(e.message)); }
+}
+function setStatus() { $("fileStatus").textContent = `Connected · ${shownYear()} · ${Object.keys(DEALERS).map(k => DEALERS[k].name).join(", ")} + Payment Details`; }
+
 /* ======================= connect + shortcuts dialogs ======================= */
 $("btnConnect").addEventListener("click", () => { $("gUrl").value = remote ? remote.url : ""; $("gKey").value = remote ? remote.key : ""; $("gNote").innerHTML = ""; $("dlgConnect").showModal(); });
 async function connectRemote(cfg) {
   const j = await api({ action: "read" }, cfg);
   remote = cfg; lsSet("remote", JSON.stringify(cfg));
   connected = true; DATA = j.data;
-  $("fileStatus").textContent = `Connected: ${Object.keys(DEALERS).map(k => DEALERS[k].name).join(", ")} + Payment Details`;
+  setStatus();
   learn();
 }
 $("gSave").addEventListener("click", async () => {
