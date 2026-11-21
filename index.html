@@ -116,16 +116,37 @@
   .dchip { border:1px solid var(--line); background:#fff; color:#15201e; border-radius:16px; padding:5px 12px; font:inherit; font-size:13px; font-weight:600; cursor:pointer; }
   .dchip.on { background:var(--dark); border-color:var(--dark); color:#fff; }
   .dh { font-size:14px; margin:18px 0 8px; color:var(--dark); }
+  .dhead { display:flex; justify-content:space-between; align-items:flex-end; gap:8px; flex-wrap:wrap; }
+  .dhead .dfilters { margin:0 0 8px; }
+  .dsec { border-top:1px solid var(--line); margin-top:20px; }
   .dchart { width:100%; height:auto; display:block; }
   .dchart text { font-size:10px; fill:#5b6b67; }
+  .dchart text.dv { font-size:9.5px; font-weight:700; fill:#15201e; }
   .dgrid { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:4px 22px; }
   .dbars { display:flex; flex-direction:column; gap:6px; }
   .dbar { display:grid; grid-template-columns:minmax(90px, 38%) 1fr auto; align-items:center; gap:8px; font-size:13px; }
   .dlab { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .dtrack { background:#e6ecea; border-radius:6px; height:10px; overflow:hidden; }
   .dtrack span { display:block; height:100%; background:var(--mid); border-radius:6px; }
+  .dtrack span.neg { background:var(--err); }
   .dval { font-weight:700; white-space:nowrap; }
   .dval small { font-weight:400; color:#5b6b67; }
+  .kpi .sub { font-size:11.5px; color:#6b7a77; margin-top:2px; }
+  .dmonth { display:flex; flex-wrap:wrap; align-items:center; gap:8px 26px; background:#fff8ec; border:1px solid #f3dcb3; border-radius:10px; padding:10px 14px; margin:4px 0 12px; font-size:14px; }
+  .dmonth b { color:var(--dark); }
+  .dmonth > div:first-child b { font-size:20px; }
+  .dup { color:var(--ok); font-weight:800; }
+  .ddown { color:var(--err); font-weight:800; }
+  .dsmall { font-size:12px; color:#6b7a77; }
+  .dscroll { overflow-x:auto; }
+  .dtable .num { text-align:right; white-space:nowrap; }
+  .dtable td { white-space:nowrap; }
+  .dagewrap { margin:0 0 12px; font-size:13.5px; }
+  .dage { display:flex; height:14px; border-radius:7px; overflow:hidden; background:#e6ecea; margin:5px 0 0; }
+  .dage span { display:block; height:100%; }
+  .dlegend { display:flex; flex-wrap:wrap; gap:4px 14px; font-size:12.5px; color:#5b6866; margin:6px 0 4px; }
+  .dlegend i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px; }
+  .dlegend b { color:#15201e; }
 </style>
 </head>
 <body>
@@ -147,8 +168,8 @@
   <button data-tab="pay">Dealer Payments</button>
   <button data-tab="clients">Clients Payments</button>
   <button data-tab="profit">Profit</button>
-  <button data-tab="dash">Dashboard</button>
   <button data-tab="track">Tracking Search</button>
+  <button data-tab="dash">Dashboard</button>
 </nav>
 
 <!-- ============ ORDERS ============ -->
@@ -243,10 +264,11 @@
       <h2 style="margin:0">Business Dashboard</h2>
       <button class="btn small" id="btnDash">Refresh</button>
     </div>
-    <p class="hint">Every year, both dealers, straight from the Google Sheets. It reads all the year folders, so it takes a few seconds.</p>
+    <p class="hint">Every year and both dealers, read straight from your Google Sheets. Takes a few seconds to load.</p>
     <div id="dashBox"><div class="empty">Open this tab after connecting to see the dashboard.</div></div>
   </div>
 </section>
+
 
 <!-- ============ TRACKING SEARCH ============ -->
 <section class="tab" id="tab-track">
@@ -1388,8 +1410,13 @@ $("saveSettings").addEventListener("click", () => { lsSet("addr", $("setAddr").v
 document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => b.closest("dialog").close()));
 
 /* ======================= dashboard (all years) ======================= */
-// Reads every year folder once and builds the business dashboard. Delivered orders only, same rule as the Profit tab.
-const DASH = { rows: [], pays: [], left: {}, loadedAt: null, yearF: "all", dealerF: "both", loading: false };
+// Reads every year folder once and builds the business dashboard.
+// Profit uses delivered orders only, same rule as the Profit tab.
+// Payment days: every order adds to what the dealer owes, every payment clears the oldest delivery first.
+const DASH = { rows: [], pays: [], left: {}, ledger: {}, names: {}, loadedAt: null, yearF: "all", dealerF: "both", metric: "net", loading: false };
+const D_DAY = 86400000;
+const D_COLORS = ["#128c7e", "#e08a00", "#5c6bc0", "#8d6e63"];
+const D_AGE = [["Up to 1 week", "#2e7d32"], ["1 to 2 weeks", "#8bb83a"], ["2 to 4 weeks", "#f0b429"], ["1 to 2 months", "#e8772e"], ["Over 2 months", "#c62828"]];
 const D_BRAND = { realme:"Realme", narzo:"Realme", vivo:"Vivo", vivio:"Vivo", samsung:"Samsung", m13:"Samsung", m14:"Samsung", f13:"Samsung", "f13/m13":"Samsung", m32:"Samsung",
   iqoo:"iQOO", iqqo:"iQOO", z9:"iQOO", one:"OnePlus", oneplus:"OnePlus", redmi:"Xiaomi", redmi12:"Xiaomi", mi:"Xiaomi", xiami:"Xiaomi", xiomi:"Xiaomi", poco:"POCO",
   motorola:"Motorola", moto:"Motorola", iphone:"Apple", "ai+":"AI+", oppo:"OPPO", techno:"Tecno", tecno:"Tecno", lava:"Lava", infinix:"Infinix", hot:"Infinix", smart:"Infinix",
@@ -1397,6 +1424,15 @@ const D_BRAND = { realme:"Realme", narzo:"Realme", vivo:"Vivo", vivio:"Vivo", sa
   sujata:"Sujata", haier:"Haier", whirlpool:"Whirlpool", zeno:"Zeno" };
 const dNum = v => { if (v === null || v === undefined || v === "") return 0; if (typeof v === "number") return v; const n = Number(String(v).replace(/[,₹\s]/g, "")); return isFinite(n) ? n : 0; };
 const dText = v => (v === null || v === undefined || typeof v === "object") ? "" : String(v).replace(/\s+/g, " ").trim();
+const dDays = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / D_DAY);
+const dIso = t => `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+const dToday = () => dIso(new Date());
+const dMonthLab = (k, withYear = true) => new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, 1).toLocaleDateString("en-GB", withYear ? { month: "short", year: "2-digit" } : { month: "long" });
+const dShort = d => new Date(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+const dAgo = n => n <= 0 ? "today" : n === 1 ? "yesterday" : `${n} days ago`;
+const dKey = m => m.toLowerCase().replace(/\s*gb\b/g, "gb").replace(/\s+/g, " ").trim();
+const dCount = n => Math.round(n).toLocaleString("en-IN");
+const dPl = (n, w) => `${dCount(n)} ${w}${Math.round(n) === 1 ? "" : "s"}`;
 function dDate(v) {
   if (v === null || v === undefined || v === "") return null;
   if (typeof v === "object" && v.d) return v.d;
@@ -1430,21 +1466,62 @@ function dashTake(j) {
     const sh = j.data && j.data[dk]; if (!sh || !sh.values || !sh.values.length) continue;
     const vals = sh.values;
     DASH.left[dk] = DASH.left[dk] || {}; DASH.left[dk][j.year] = dNum((vals[1] || [])[26]);
-    let lastDate = null; const undated = [];
+    let lastDate = null, lastPay = null; const undated = [], undatedPays = [];
     for (let i = FIRST_DATA_ROW - 1; i < vals.length; i++) {
       const r = vals[i] || [];
       const model = dText(r[5]), money = [13, 14, 15, 16, 18].map(c => dNum(r[c]));
       if (model || money.some(x => x)) {
-        const status = dText(r[9]).toLowerCase();
-        const row = { dealer: dk, year: j.year, date: dDate(r[0]), platform: dText(r[2]).replace(/\d/g, "").trim(), model,
-          units: dNum(r[6]) > 0 ? dNum(r[6]) : (model ? 1 : 0), status,
+        const date = dDate(r[0]);
+        const row = { dealer: dk, year: j.year, seq: DASH.rows.length, date, est: !date, del: dDate(r[10]),
+          platform: dText(r[2]).replace(/\d/g, "").trim(), model, mkey: model ? dKey(model) : "",
+          units: dNum(r[6]) > 0 ? dNum(r[6]) : (model ? 1 : 0), status: dText(r[9]).toLowerCase(),
           amount: money[0], com: money[1], cb: money[2], bx: money[3], cut: money[4] };
-        if (row.date) { lastDate = row.date; undated.splice(0).forEach(u => u.date = row.date); } else if (lastDate) row.date = lastDate; else undated.push(row);
+        if (date) { lastDate = date; undated.splice(0).forEach(u => u.date = date); } else if (lastDate) row.date = lastDate; else undated.push(row);
         DASH.rows.push(row);
       }
-      const who = (dText(r[22]) + " " + dText(r[23])).toLowerCase(), got = dNum(r[24]);
-      if (got && !who.includes("previous year due")) DASH.pays.push({ dealer: dk, year: j.year, date: dDate(r[21]), got });
+      // Payments: rows with no date take the nearest date in the same sheet. The yearly carry-over row is skipped.
+      const who = (dText(r[22]) + " " + dText(r[23])).toLowerCase(), got = dNum(r[24]), pd = dDate(r[21]);
+      if (pd) { lastPay = pd; undatedPays.splice(0).forEach(p => p.date = pd); }
+      if (got && !who.includes("previous year due")) { const p = { dealer: dk, year: j.year, date: pd || lastPay, est: !pd, got }; if (!p.date) undatedPays.push(p); DASH.pays.push(p); }
     }
+  }
+}
+function dashNames() {
+  // One spelling per model, so "iPhone 13" and "iphone 13" count together. The most used spelling wins.
+  const seen = {};
+  for (const r of DASH.rows) if (r.mkey) { const s = seen[r.mkey] = seen[r.mkey] || {}; s[r.model] = (s[r.model] || 0) + 1; }
+  DASH.names = {};
+  for (const k in seen) DASH.names[k] = Object.entries(seen[k]).sort((a, b) => b[1] - a[1])[0][0];
+}
+function dashLedger() {
+  const today = dToday(); DASH.ledger = {};
+  for (const dk of Object.keys(DEALERS)) {
+    const bills = DASH.rows.filter(r => r.dealer === dk && r.amount + r.com > 0);
+    for (const r of bills) {
+      // The dealer owes from the delivery date. If that is missing or looks wrong, the order date is used.
+      let day = r.date || `${r.year}-01-01`, real = !r.est && !!r.date;
+      if (r.del) { if (!real) { day = r.del; real = true; } else { const g = dDays(r.date, r.del); if (g >= 0 && g <= 60) day = r.del; } }
+      r.billDay = day; r.billReal = real; r.paidOn = null; r.payDays = null; r.waitDays = null;
+    }
+    bills.sort((a, b) => a.billDay < b.billDay ? -1 : a.billDay > b.billDay ? 1 : (a.year - b.year) || (a.seq - b.seq));
+    const pays = DASH.pays.filter(p => p.dealer === dk).map(p => ({ ...p, date: p.date || `${p.year}-01-01` }))
+      .sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+    let billed = 0, paid = 0, k = 0;
+    for (const b of bills) {
+      billed += b.amount + b.com;
+      while (k < pays.length && paid < billed - 1) paid += pays[k++].got;
+      if (k > 0 && paid >= billed - 1) { const p = pays[k - 1]; b.paidOn = p.date; if (b.billReal && !p.est) b.payDays = Math.max(0, dDays(b.billDay, p.date)); }
+      else if (b.billReal) b.waitDays = Math.max(0, dDays(b.billDay, today));
+    }
+    const totalPaid = pays.reduce((s, p) => s + p.got, 0);
+    let rem = billed - totalPaid, oldest = null; const age = [0, 0, 0, 0, 0];
+    for (let i = bills.length - 1; i >= 0 && rem > 1; i--) {
+      const b = bills[i], part = Math.min(b.amount + b.com, rem), a = dDays(b.billDay, today);
+      rem -= part; oldest = b.billDay; age[a <= 7 ? 0 : a <= 15 ? 1 : a <= 30 ? 2 : a <= 60 ? 3 : 4] += part;
+    }
+    const last = pays.filter(p => !p.est).pop() || null;
+    DASH.ledger[dk] = { owed: billed - totalPaid, age, oldest, lastPay: last && last.date,
+      lastAmt: last ? pays.filter(p => p.date === last.date).reduce((s, p) => s + p.got, 0) : 0 };
   }
 }
 async function loadDash() {
@@ -1456,81 +1533,169 @@ async function loadDash() {
     const first = await dashRead("");
     const years = first.years || [first.year];
     dashTake(first);
-    for (const y of years) if (y !== first.year) { $("dashBox").innerHTML = `<div class="empty">Reading ${y}…</div>`; dashTake(await dashRead(y)); }
+    for (const y of years) if (y !== first.year) { $("dashBox").innerHTML = `<div class="empty">Reading ${esc(y)}…</div>`; dashTake(await dashRead(y)); }
     DASH.years = years.slice().sort(); DASH.loadedAt = new Date();
-    renderDash();
+    dashNames(); dashLedger(); renderDash();
   } catch (e) { $("dashBox").innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
   finally { DASH.loading = false; }
 }
 const isDelivered = r => r.status.includes("deliver") || (!r.status && (r.amount || r.com));
+const dealerOk = r => DASH.dealerF === "both" || r.dealer === DASH.dealerF;
 function dashFilter() {
-  return DASH.rows.filter(r => isDelivered(r) && (DASH.dealerF === "both" || r.dealer === DASH.dealerF)
-    && (DASH.yearF === "all" || (r.date || "").slice(0, 4) === DASH.yearF));
+  return DASH.rows.filter(r => isDelivered(r) && dealerOk(r) && (DASH.yearF === "all" || (r.date || "").slice(0, 4) === DASH.yearF));
 }
 function groupBy(rows, key) {
   const g = new Map();
-  for (const r of rows) { const k = key(r); const t = g.get(k) || { net: 0, units: 0, orders: 0, amount: 0 }; t.net += r.com + r.cb + r.bx - r.cut; t.units += r.units; t.orders += 1; t.amount += r.amount; g.set(k, t); }
+  for (const r of rows) {
+    const k = key(r); const t = g.get(k) || { net: 0, units: 0, orders: 0, amount: 0 };
+    t.net += r.com + r.cb + r.bx - r.cut; t.units += r.units; t.orders += 1; t.amount += r.amount; g.set(k, t);
+  }
   return g;
 }
+const dTotal = rows => [...groupBy(rows, () => "all").values()][0] || { net: 0, units: 0, orders: 0, amount: 0 };
+function payStats(rows) {
+  // Average days from delivery to payment, weighted by money. Deliveries not paid yet count the days waited so far.
+  let w = 0, s = 0, fast = 0;
+  for (const r of rows) {
+    const b = r.amount + r.com, d = r.payDays !== null && r.payDays !== undefined ? r.payDays : r.waitDays;
+    if (d === null || d === undefined || b <= 0) continue;
+    w += b; s += b * d; if (r.payDays !== null && r.payDays !== undefined && r.payDays <= 15) fast += b;
+  }
+  return { avg: w ? s / w : null, fast: w ? fast / w * 100 : null };
+}
+const dDaysTxt = v => v === null ? "-" : `${Math.round(v)} day${Math.round(v) === 1 ? "" : "s"}`;
 function hbars(entries, fmt, sub) {
   const max = Math.max(...entries.map(e => Math.abs(e[1].net)), 1);
   return `<div class="dbars">${entries.map(([k, t]) => `<div class="dbar"><div class="dlab" title="${esc(k)}">${esc(k)}</div>
-    <div class="dtrack"><span style="width:${Math.max(2, Math.abs(t.net) / max * 100).toFixed(1)}%"></span></div>
+    <div class="dtrack"><span${t.net < 0 ? ` class="neg"` : ""} style="width:${Math.max(2, Math.abs(t.net) / max * 100).toFixed(1)}%"></span></div>
     <div class="dval">${fmt(t)}<small>${sub(t)}</small></div></div>`).join("")}</div>`;
+}
+function monthBox() {
+  const today = dToday(), m = today.slice(0, 7), day = +today.slice(8, 10);
+  const p = new Date(+m.slice(0, 4), +m.slice(5, 7) - 2, 1), pm = dIso(p).slice(0, 7);
+  const base = DASH.rows.filter(r => isDelivered(r) && dealerOk(r) && r.date);
+  const cur = dTotal(base.filter(r => r.date.slice(0, 7) === m));
+  const old = dTotal(base.filter(r => r.date.slice(0, 7) === pm && +r.date.slice(8, 10) <= day));
+  const ch = old.net ? (cur.net - old.net) / Math.abs(old.net) * 100 : null;
+  return `<div class="dmonth">
+    <div><span class="dsmall">${dMonthLab(m, false)} so far</span><br><b>${inr(cur.net)}</b> profit</div>
+    <div><b>${dPl(cur.orders, "order")}</b> · <b>${dPl(cur.units, "item")}</b></div>
+    <div><span class="dsmall">Same days last month (1 to ${day} ${dMonthLab(pm, false)})</span><br>${inr(old.net)} profit · ${dPl(old.orders, "order")}</div>
+    ${ch === null ? "" : `<div class="${ch >= 0 ? "dup" : "ddown"}">${ch >= 0 ? "▲ Up" : "▼ Down"} ${Math.abs(ch).toFixed(0)}%</div>`}
+  </div>`;
 }
 function monthChart(rows) {
   const g = groupBy(rows, r => (r.date || "").slice(0, 7));
   let keys = [...g.keys()].filter(Boolean).sort();
   if (DASH.yearF === "all") keys = keys.slice(-24);
   if (!keys.length) return `<div class="empty">No delivered orders here.</div>`;
-  const vals = keys.map(k => g.get(k).net), max = Math.max(...vals.map(Math.abs), 1);
+  const mt = DASH.metric, fmt = mt === "net" ? inr : dCount;
+  const vals = keys.map(k => g.get(k)[mt]), max = Math.max(...vals.map(Math.abs), 1);
   const W = 640, H = 170, bw = W / keys.length;
-  const bars = keys.map((k, i) => { const h = Math.abs(vals[i]) / max * (H - 30); const lab = new Date(+k.slice(0, 4), +k.slice(5) - 1, 1).toLocaleDateString("en-GB", { month: "short", year: "2-digit" });
-    return `<g><title>${lab}: ${inr(vals[i])}</title><rect x="${(i * bw + bw * 0.15).toFixed(1)}" y="${(H - 18 - h).toFixed(1)}" width="${(bw * 0.7).toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${vals[i] < 0 ? "#c62828" : "var(--mid)"}"></rect>
-      ${(keys.length <= 12 || i % 3 === 0) ? `<text x="${(i * bw + bw / 2).toFixed(1)}" y="${H - 4}" text-anchor="middle">${lab}</text>` : ""}</g>`; }).join("");
-  return `<svg class="dchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Net profit by month">${bars}</svg>`;
+  const bars = keys.map((k, i) => {
+    const h = Math.abs(vals[i]) / max * (H - 30), lab = dMonthLab(k);
+    return `<g><title>${lab}: ${fmt(vals[i])}</title><rect x="${(i * bw + bw * 0.15).toFixed(1)}" y="${(H - 18 - h).toFixed(1)}" width="${(bw * 0.7).toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${vals[i] < 0 ? "#c62828" : "var(--mid)"}"></rect>
+      ${(keys.length <= 12 || i % 3 === 0) ? `<text x="${(i * bw + bw / 2).toFixed(1)}" y="${H - 4}" text-anchor="middle">${lab}</text>` : ""}</g>`;
+  }).join("");
+  return `<svg class="dchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Month by month">${bars}</svg>`;
+}
+function payMonths() {
+  const now = dToday().slice(0, 7), out = [];
+  if (DASH.yearF === "all") { const t = new Date(+now.slice(0, 4), +now.slice(5, 7) - 1, 1); for (let i = 11; i >= 0; i--) out.push(dIso(new Date(t.getFullYear(), t.getMonth() - i, 1)).slice(0, 7)); }
+  else for (let i = 1; i <= 12; i++) { const k = `${DASH.yearF}-${String(i).padStart(2, "0")}`; if (k <= now) out.push(k); }
+  return out;
+}
+function payChart(dks) {
+  const months = payMonths();
+  const vals = months.map(m => dks.map(dk => payStats(DASH.rows.filter(r => r.dealer === dk && isDelivered(r) && (r.billDay || "").slice(0, 7) === m)).avg));
+  const flat = vals.flat().filter(v => v !== null);
+  if (!flat.length) return `<div class="empty">No deliveries in this period.</div>`;
+  const max = Math.max(...flat, 1), W = 640, H = 180, gw = W / months.length, bw = gw * 0.72 / dks.length;
+  const bars = months.map((m, i) => dks.map((dk, j) => {
+    const v = vals[i][j]; if (v === null) return "";
+    const h = Math.max(1.5, v / max * (H - 42)), x = i * gw + gw * 0.14 + j * bw, y = H - 18 - h;
+    return `<g><title>${esc(DEALERS[dk].name)}, delivered ${dMonthLab(m)}: ${dDaysTxt(v)}</title>
+      <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(bw - 1).toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${D_COLORS[Object.keys(DEALERS).indexOf(dk) % D_COLORS.length]}"></rect>
+      <text class="dv" x="${(x + bw / 2).toFixed(1)}" y="${(y - 3).toFixed(1)}" text-anchor="middle">${Math.round(v)}</text></g>`;
+  }).join("") + `<text x="${(i * gw + gw / 2).toFixed(1)}" y="${H - 4}" text-anchor="middle">${dMonthLab(m)}</text>`).join("");
+  return `<svg class="dchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Days to get paid by delivery month">${bars}</svg>`;
+}
+function dealerLegend(dks) {
+  return `<div class="dlegend">${dks.map(dk => `<span><i style="background:${D_COLORS[Object.keys(DEALERS).indexOf(dk) % D_COLORS.length]}"></i>${esc(DEALERS[dk].name)}</span>`).join("")}</div>`;
+}
+function agingRow(dk) {
+  const L = DASH.ledger[dk], tot = L.age.reduce((s, x) => s + x, 0);
+  if (tot < 1) return `<div class="dagewrap"><b>${esc(DEALERS[dk].name)}</b><div class="dsmall">Nothing pending. All paid up.</div></div>`;
+  return `<div class="dagewrap"><b>${esc(DEALERS[dk].name)}</b>
+    <div class="dage">${L.age.map((v, i) => v > 0 ? `<span title="${D_AGE[i][0]}: ${inr(v)}" style="width:${(v / tot * 100).toFixed(1)}%;background:${D_AGE[i][1]}"></span>` : "").join("")}</div>
+    <div class="dlegend">${L.age.map((v, i) => v > 0 ? `<span><i style="background:${D_AGE[i][1]}"></i>${D_AGE[i][0]}: <b>${inr(v)}</b></span>` : "").join("")}</div></div>`;
 }
 function renderDash() {
-  const rows = dashFilter();
-  const tot = [...groupBy(rows, () => "all").values()][0] || { net: 0, units: 0, orders: 0, amount: 0 };
-  const latest = DASH.years[DASH.years.length - 1];
+  const rows = dashFilter(), tot = dTotal(rows), ps = payStats(rows);
+  const latest = DASH.years[DASH.years.length - 1], today = dToday();
+  const dks = Object.keys(DEALERS).filter(dk => DASH.dealerF === "both" || dk === DASH.dealerF);
   const dueOf = dk => (DASH.left[dk] || {})[latest] || 0;
-  const dues = DASH.dealerF === "both" ? Object.keys(DEALERS).reduce((s, dk) => s + dueOf(dk), 0) : dueOf(DASH.dealerF);
-  const models = [...groupBy(rows.filter(r => r.model), r => r.model).entries()].sort((a, b) => b[1].net - a[1].net).slice(0, 10);
-  const brands = [...groupBy(rows.filter(r => r.model), r => dBrand(r.model)).entries()].sort((a, b) => b[1].net - a[1].net).slice(0, 8);
+  const dues = dks.reduce((s, dk) => s + dueOf(dk), 0);
+  const named = rows.filter(r => r.mkey);
+  const models = [...groupBy(named, r => r.mkey).entries()].map(([k, t]) => [DASH.names[k] || k, t]);
+  const best = models.slice().sort((a, b) => b[1].net - a[1].net).slice(0, 10);
+  const low = models.filter(([, t]) => t.units >= 5).map(([k, t]) => [k, { ...t, total: t.net, net: t.net / t.units }]).sort((a, b) => a[1].net - b[1].net).slice(0, 6);
+  const brands = [...groupBy(named, r => dBrand(r.model)).entries()].sort((a, b) => b[1].net - a[1].net).slice(0, 8);
   const cats = [...groupBy(rows, r => dCategory(r.model)).entries()].sort((a, b) => b[1].net - a[1].net);
   const plats = [...groupBy(rows, r => r.platform || "Not recorded").entries()].sort((a, b) => b[1].orders - a[1].orders).slice(0, 6);
+  const shipDays = p => { const d = rows.filter(r => (r.platform || "Not recorded") === p && !r.est && r.del && r.date).map(r => dDays(r.date, r.del)).filter(x => x >= 0 && x <= 60); return d.length ? d.reduce((s, x) => s + x, 0) / d.length : null; };
   const chip = (v, lab, cur, attr) => `<button class="dchip${v === cur ? " on" : ""}" data-${attr}="${v}">${lab}</button>`;
+  const period = DASH.yearF === "all" ? "all years" : DASH.yearF;
   $("dashBox").innerHTML = `
     <div class="dfilters">${chip("all", "All years", DASH.yearF, "dy")}${DASH.years.map(y => chip(y, y, DASH.yearF, "dy")).join("")}</div>
-    <div class="dfilters">${chip("both", "Both dealers", DASH.dealerF, "dd")}${Object.keys(DEALERS).map(dk => chip(dk, DEALERS[dk].name.split(" ")[0], DASH.dealerF, "dd")).join("")}</div>
+    <div class="dfilters">${chip("both", "Both dealers", DASH.dealerF, "dd")}${Object.keys(DEALERS).map(dk => chip(dk, esc(DEALERS[dk].name.split(" ")[0]), DASH.dealerF, "dd")).join("")}</div>
+    ${monthBox()}
     <div class="kpis">
-      <div class="kpi net"><div class="lbl">Net profit</div><div class="val">${inr(tot.net)}</div></div>
-      <div class="kpi"><div class="lbl">Delivered orders</div><div class="val">${tot.orders.toLocaleString("en-IN")}</div></div>
-      <div class="kpi"><div class="lbl">Units</div><div class="val">${tot.units.toLocaleString("en-IN")}</div></div>
-      <div class="kpi"><div class="lbl">Profit per unit</div><div class="val">${inr(tot.units ? Math.round(tot.net / tot.units) : 0)}</div></div>
-      <div class="kpi"><div class="lbl">Margin on what I paid</div><div class="val">${tot.amount ? (tot.net / tot.amount * 100).toFixed(2) : "0.00"}%</div></div>
-      <div class="kpi net"><div class="lbl">Dealers owe me now</div><div class="val">${inr(dues)}</div></div>
+      <div class="kpi net"><div class="lbl">My profit</div><div class="val">${inr(tot.net)}</div><div class="sub">after paying clients their share</div></div>
+      <div class="kpi"><div class="lbl">Orders delivered</div><div class="val">${dCount(tot.orders)}</div><div class="sub">${dPl(tot.units, "item")} sold</div></div>
+      <div class="kpi"><div class="lbl">Profit per item</div><div class="val">${inr(tot.units ? tot.net / tot.units : 0)}</div><div class="sub">average on each item sold</div></div>
+      <div class="kpi"><div class="lbl">Profit per ₹100 spent</div><div class="val">₹${tot.amount ? (tot.net / tot.amount * 100).toFixed(2) : "0.00"}</div><div class="sub">for every ₹100 I pay to buy</div></div>
+      <div class="kpi"><div class="lbl">Days to get paid</div><div class="val">${dDaysTxt(ps.avg)}</div><div class="sub">average, from delivery to payment</div></div>
+      <div class="kpi net"><div class="lbl">Dealers still owe</div><div class="val">${inr(dues)}</div><div class="sub">as of today</div></div>
     </div>
-    <h3 class="dh">Net profit by month${DASH.yearF === "all" ? " (last 24 months)" : ", " + DASH.yearF}</h3>${monthChart(rows)}
-    <div class="dgrid">
-      <div><h3 class="dh">Models that made the most</h3>${models.length ? hbars(models, t => inr(t.net), t => ` · ${t.units} units`) : `<div class="empty">Nothing yet.</div>`}</div>
-      <div><h3 class="dh">Brands</h3>${hbars(brands, t => inr(t.net), t => ` · ${inr(t.units ? Math.round(t.net / t.units) : 0)}/unit`)}
-        <h3 class="dh">Product types</h3>${hbars(cats, t => inr(t.net), t => ` · ${t.units} units`)}</div>
+    <div class="dhead"><h3 class="dh">Month by month${DASH.yearF === "all" ? " (last 24 months)" : ", " + DASH.yearF}</h3>
+      <div class="dfilters">${chip("net", "Profit", DASH.metric, "dm")}${chip("orders", "Orders", DASH.metric, "dm")}${chip("units", "Items", DASH.metric, "dm")}</div></div>
+    ${monthChart(rows)}
+
+    <div class="dsec"><h3 class="dh">How fast dealers pay me</h3>
+      <div class="dscroll"><table class="list dtable"><tr><th>Dealer</th><th class="num">Owes now</th><th class="num">Days to pay (${period})</th><th class="num">Paid within 15 days</th><th>Oldest unpaid delivery</th><th>Last payment</th></tr>
+      ${dks.map(dk => { const L = DASH.ledger[dk], s = payStats(rows.filter(r => r.dealer === dk));
+        return `<tr><td><b>${esc(DEALERS[dk].name)}</b></td><td class="num">${inr(dueOf(dk))}</td><td class="num">${dDaysTxt(s.avg)}</td>
+          <td class="num">${s.fast === null ? "-" : s.fast.toFixed(0) + "%"}</td>
+          <td>${L.oldest ? `${dShort(L.oldest)} <span class="dsmall">(${dAgo(dDays(L.oldest, today))})</span>` : "Nothing pending"}</td>
+          <td>${L.lastPay ? `${dShort(L.lastPay)} · ${inr(L.lastAmt)} <span class="dsmall">(${dAgo(dDays(L.lastPay, today))})</span>` : "-"}</td></tr>`; }).join("")}
+      </table></div>
+      <h3 class="dh">How old is the money they owe</h3>${dks.map(agingRow).join("")}
+      <h3 class="dh">Days to get paid, by delivery month</h3>${dealerLegend(dks)}${payChart(dks)}
+      <p class="hint">Each payment is counted against the oldest delivery first. Deliveries not paid yet count the days waited so far. Lower is better.</p>
     </div>
-    <div class="dgrid">
-      <div><h3 class="dh">Where I buy from</h3>${hbars(plats.map(([k, t]) => [k, { ...t, net: t.orders }]), t => t.orders + " orders", () => "")}</div>
-      <div><h3 class="dh">Dealer balance (${latest} sheets)</h3>
-        <table class="list"><tr><th>Dealer</th><th class="num">Owes me</th></tr>
-        ${Object.keys(DEALERS).map(dk => `<tr><td>${esc(DEALERS[dk].name)}</td><td class="num">${inr(dueOf(dk))}</td></tr>`).join("")}</table>
-        <p class="hint">Same as the LEFT cell in each ${latest} sheet.</p></div>
-    </div>
-    <p class="hint">Updated ${DASH.loadedAt.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}. Delivered orders only, by order date. Early 2022 rows with no date use the nearest date in the same sheet.</p>`;
+
+    <div class="dsec"><div class="dgrid">
+      <div><h3 class="dh">Best earning models</h3>${best.length ? hbars(best, t => inr(t.net), t => ` · ${dPl(t.units, "item")}`) : `<div class="empty">Nothing yet.</div>`}</div>
+      <div><h3 class="dh">Profit by brand</h3>${hbars(brands, t => inr(t.net), t => ` · ${inr(t.units ? t.net / t.units : 0)}/item`)}
+        <h3 class="dh">Profit by product type</h3>${hbars(cats, t => inr(t.net), t => ` · ${dPl(t.units, "item")}`)}</div>
+    </div></div>
+    <div class="dsec"><div class="dgrid">
+      <div><h3 class="dh">Models that earn the least per item</h3>${low.length ? hbars(low, t => inr(t.net) + "/item", t => ` · ${dPl(t.units, "item")} sold`) : `<div class="empty">Not enough sales yet.</div>`}
+        <p class="hint">Only models sold 5 times or more. Worth a second look before buying again.</p></div>
+      <div><h3 class="dh">Where I buy from</h3>
+        <table class="list dtable"><tr><th>Platform</th><th class="num">Orders</th><th class="num">Profit per item</th><th class="num">Days to deliver</th></tr>
+        ${plats.map(([p, t]) => { const sd = shipDays(p); return `<tr><td>${esc(p)}</td><td class="num">${dCount(t.orders)}</td><td class="num">${inr(t.units ? t.net / t.units : 0)}</td><td class="num">${sd === null ? "-" : sd.toFixed(1)}</td></tr>`; }).join("")}
+        </table></div>
+    </div></div>
+    <p class="hint">Updated ${DASH.loadedAt.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}. Profit counts delivered orders only, by order date. "Owes now" is the LEFT cell in each ${esc(latest)} sheet.</p>`;
 }
 $("dashBox").addEventListener("click", e => {
-  const y = e.target.closest("[data-dy]"), d = e.target.closest("[data-dd]");
-  if (y) { DASH.yearF = y.dataset.dy; renderDash(); }
-  if (d) { DASH.dealerF = d.dataset.dd; renderDash(); }
+  const y = e.target.closest("[data-dy]"), d = e.target.closest("[data-dd]"), m = e.target.closest("[data-dm]");
+  if (y) DASH.yearF = y.dataset.dy;
+  if (d) DASH.dealerF = d.dataset.dd;
+  if (m) DASH.metric = m.dataset.dm;
+  if (y || d || m) renderDash();
 });
 $("btnDash").addEventListener("click", loadDash);
 document.querySelector('nav [data-tab="dash"]').addEventListener("click", () => { if (!DASH.loadedAt && !DASH.loading) loadDash(); });
