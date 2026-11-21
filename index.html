@@ -111,6 +111,21 @@
   dialog .row { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; flex-wrap:wrap; }
   .radio { display:flex; gap:14px; flex-wrap:wrap; margin:6px 0; font-size:14px; }
   @media (max-width:600px) { .opt { display:none; } table.list td, table.list th { padding:7px 5px; } .tab { padding:10px; } .panel { padding:13px; } header { padding:10px 12px; } }
+  /* dashboard */
+  .dfilters { display:flex; gap:6px; flex-wrap:wrap; margin:0 0 8px; }
+  .dchip { border:1px solid var(--line); background:#fff; color:#15201e; border-radius:16px; padding:5px 12px; font:inherit; font-size:13px; font-weight:600; cursor:pointer; }
+  .dchip.on { background:var(--dark); border-color:var(--dark); color:#fff; }
+  .dh { font-size:14px; margin:18px 0 8px; color:var(--dark); }
+  .dchart { width:100%; height:auto; display:block; }
+  .dchart text { font-size:10px; fill:#5b6b67; }
+  .dgrid { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:4px 22px; }
+  .dbars { display:flex; flex-direction:column; gap:6px; }
+  .dbar { display:grid; grid-template-columns:minmax(90px, 38%) 1fr auto; align-items:center; gap:8px; font-size:13px; }
+  .dlab { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .dtrack { background:#e6ecea; border-radius:6px; height:10px; overflow:hidden; }
+  .dtrack span { display:block; height:100%; background:var(--mid); border-radius:6px; }
+  .dval { font-weight:700; white-space:nowrap; }
+  .dval small { font-weight:400; color:#5b6b67; }
 </style>
 </head>
 <body>
@@ -132,6 +147,7 @@
   <button data-tab="pay">Dealer Payments</button>
   <button data-tab="clients">Clients Payments</button>
   <button data-tab="profit">Profit</button>
+  <button data-tab="dash">Dashboard</button>
   <button data-tab="track">Tracking Search</button>
 </nav>
 
@@ -217,6 +233,18 @@
     <h2 id="profitTitle">Month-Wise Profit</h2>
     <p class="hint">Delivered orders only, by order date. Profit = Commission + Cashback + Bulk extra. Net profit = Profit − Commission cut.</p>
     <div id="profitBox"><div class="empty">Press Connect to see your profits.</div></div>
+  </div>
+</section>
+
+<!-- ============ DASHBOARD ============ -->
+<section class="tab" id="tab-dash">
+  <div class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <h2 style="margin:0">Business Dashboard</h2>
+      <button class="btn small" id="btnDash">Refresh</button>
+    </div>
+    <p class="hint">Every year, both dealers, straight from the Google Sheets. It reads all the year folders, so it takes a few seconds.</p>
+    <div id="dashBox"><div class="empty">Open this tab after connecting to see the dashboard.</div></div>
   </div>
 </section>
 
@@ -1358,6 +1386,154 @@ $("gDisconnect").addEventListener("click", () => { remote = null; connected = fa
 $("btnSettings").addEventListener("click", () => { $("setAddr").value = loadMap("addr", "").txt; $("setPlat").value = loadMap("plat", DEFAULT_PLATFORMS).txt; $("dlgSettings").showModal(); });
 $("saveSettings").addEventListener("click", () => { lsSet("addr", $("setAddr").value); lsSet("plat", $("setPlat").value); addrMap = loadMap("addr", "").map; platMap = loadMap("plat", DEFAULT_PLATFORMS).map; $("dlgSettings").close(); });
 document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => b.closest("dialog").close()));
+
+/* ======================= dashboard (all years) ======================= */
+// Reads every year folder once and builds the business dashboard. Delivered orders only, same rule as the Profit tab.
+const DASH = { rows: [], pays: [], left: {}, loadedAt: null, yearF: "all", dealerF: "both", loading: false };
+const D_BRAND = { realme:"Realme", narzo:"Realme", vivo:"Vivo", vivio:"Vivo", samsung:"Samsung", m13:"Samsung", m14:"Samsung", f13:"Samsung", "f13/m13":"Samsung", m32:"Samsung",
+  iqoo:"iQOO", iqqo:"iQOO", z9:"iQOO", one:"OnePlus", oneplus:"OnePlus", redmi:"Xiaomi", redmi12:"Xiaomi", mi:"Xiaomi", xiami:"Xiaomi", xiomi:"Xiaomi", poco:"POCO",
+  motorola:"Motorola", moto:"Motorola", iphone:"Apple", "ai+":"AI+", oppo:"OPPO", techno:"Tecno", tecno:"Tecno", lava:"Lava", infinix:"Infinix", hot:"Infinix", smart:"Infinix",
+  honor:"Honor", nothing:"Nothing", cmf:"Nothing", lg:"LG", boat:"boAt", bajaj:"Bajaj", orient:"Orient", godrej:"Godrej", havells:"Havells", voltas:"Voltas",
+  sujata:"Sujata", haier:"Haier", whirlpool:"Whirlpool", zeno:"Zeno" };
+const dNum = v => { if (v === null || v === undefined || v === "") return 0; if (typeof v === "number") return v; const n = Number(String(v).replace(/[,₹\s]/g, "")); return isFinite(n) ? n : 0; };
+const dText = v => (v === null || v === undefined || typeof v === "object") ? "" : String(v).replace(/\s+/g, " ").trim();
+function dDate(v) {
+  if (v === null || v === undefined || v === "") return null;
+  if (typeof v === "object" && v.d) return v.d;
+  if (typeof v === "number") { const t = new Date(Date.UTC(1899, 11, 30) + Math.floor(v) * 86400000); return t.toISOString().slice(0, 10); }
+  const m = String(v).trim().match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  return /^\d{4}-\d{2}-\d{2}/.test(String(v)) ? String(v).slice(0, 10) : null;
+}
+function dBrand(model) { if (!model) return "Not recorded"; const w = model.toLowerCase().split(" ")[0]; return D_BRAND[w] || "Other"; }
+function dCategory(model) {
+  if (!model) return "Not recorded";
+  const m = " " + model.toLowerCase() + " ", has = a => a.some(w => m.includes(w));
+  if (has(["refriger", "fridge", "direct cool", "single door"])) return "Refrigerator";
+  if (has(["washing"])) return "Washing machine";
+  if (has([" tv", "tv ", "inch"])) return "TV";
+  if (has(["fan", "iron", "mixer", "grinder", " ac ", " ton "])) return "Home appliance";
+  if (has([" tab", " pad"])) return "Tablet";
+  if (has(["buds", "watch"])) return "Audio & wearables";
+  return "Smartphone";
+}
+async function dashRead(y) {
+  let r;
+  try { r = await fetch(remote.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "read", year: y, key: remote.key }) }); }
+  catch (e) { throw new Error("Couldn't reach your Google Sheets. Check the internet connection and try again."); }
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || "Google Sheets error");
+  return j;
+}
+function dashTake(j) {
+  for (const dk of Object.keys(DEALERS)) {
+    const sh = j.data && j.data[dk]; if (!sh || !sh.values || !sh.values.length) continue;
+    const vals = sh.values;
+    DASH.left[dk] = DASH.left[dk] || {}; DASH.left[dk][j.year] = dNum((vals[1] || [])[26]);
+    let lastDate = null; const undated = [];
+    for (let i = FIRST_DATA_ROW - 1; i < vals.length; i++) {
+      const r = vals[i] || [];
+      const model = dText(r[5]), money = [13, 14, 15, 16, 18].map(c => dNum(r[c]));
+      if (model || money.some(x => x)) {
+        const status = dText(r[9]).toLowerCase();
+        const row = { dealer: dk, year: j.year, date: dDate(r[0]), platform: dText(r[2]).replace(/\d/g, "").trim(), model,
+          units: dNum(r[6]) > 0 ? dNum(r[6]) : (model ? 1 : 0), status,
+          amount: money[0], com: money[1], cb: money[2], bx: money[3], cut: money[4] };
+        if (row.date) { lastDate = row.date; undated.splice(0).forEach(u => u.date = row.date); } else if (lastDate) row.date = lastDate; else undated.push(row);
+        DASH.rows.push(row);
+      }
+      const who = (dText(r[22]) + " " + dText(r[23])).toLowerCase(), got = dNum(r[24]);
+      if (got && !who.includes("previous year due")) DASH.pays.push({ dealer: dk, year: j.year, date: dDate(r[21]), got });
+    }
+  }
+}
+async function loadDash() {
+  if (!remote) { $("dashBox").innerHTML = `<div class="empty">Press Connect first.</div>`; return; }
+  if (DASH.loading) return; DASH.loading = true;
+  $("dashBox").innerHTML = `<div class="empty">Reading every year's sheets…</div>`;
+  try {
+    DASH.rows = []; DASH.pays = []; DASH.left = {};
+    const first = await dashRead("");
+    const years = first.years || [first.year];
+    dashTake(first);
+    for (const y of years) if (y !== first.year) { $("dashBox").innerHTML = `<div class="empty">Reading ${y}…</div>`; dashTake(await dashRead(y)); }
+    DASH.years = years.slice().sort(); DASH.loadedAt = new Date();
+    renderDash();
+  } catch (e) { $("dashBox").innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
+  finally { DASH.loading = false; }
+}
+const isDelivered = r => r.status.includes("deliver") || (!r.status && (r.amount || r.com));
+function dashFilter() {
+  return DASH.rows.filter(r => isDelivered(r) && (DASH.dealerF === "both" || r.dealer === DASH.dealerF)
+    && (DASH.yearF === "all" || (r.date || "").slice(0, 4) === DASH.yearF));
+}
+function groupBy(rows, key) {
+  const g = new Map();
+  for (const r of rows) { const k = key(r); const t = g.get(k) || { net: 0, units: 0, orders: 0, amount: 0 }; t.net += r.com + r.cb + r.bx - r.cut; t.units += r.units; t.orders += 1; t.amount += r.amount; g.set(k, t); }
+  return g;
+}
+function hbars(entries, fmt, sub) {
+  const max = Math.max(...entries.map(e => Math.abs(e[1].net)), 1);
+  return `<div class="dbars">${entries.map(([k, t]) => `<div class="dbar"><div class="dlab" title="${esc(k)}">${esc(k)}</div>
+    <div class="dtrack"><span style="width:${Math.max(2, Math.abs(t.net) / max * 100).toFixed(1)}%"></span></div>
+    <div class="dval">${fmt(t)}<small>${sub(t)}</small></div></div>`).join("")}</div>`;
+}
+function monthChart(rows) {
+  const g = groupBy(rows, r => (r.date || "").slice(0, 7));
+  let keys = [...g.keys()].filter(Boolean).sort();
+  if (DASH.yearF === "all") keys = keys.slice(-24);
+  if (!keys.length) return `<div class="empty">No delivered orders here.</div>`;
+  const vals = keys.map(k => g.get(k).net), max = Math.max(...vals.map(Math.abs), 1);
+  const W = 640, H = 170, bw = W / keys.length;
+  const bars = keys.map((k, i) => { const h = Math.abs(vals[i]) / max * (H - 30); const lab = new Date(+k.slice(0, 4), +k.slice(5) - 1, 1).toLocaleDateString("en-GB", { month: "short", year: "2-digit" });
+    return `<g><title>${lab}: ${inr(vals[i])}</title><rect x="${(i * bw + bw * 0.15).toFixed(1)}" y="${(H - 18 - h).toFixed(1)}" width="${(bw * 0.7).toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${vals[i] < 0 ? "#c62828" : "var(--mid)"}"></rect>
+      ${(keys.length <= 12 || i % 3 === 0) ? `<text x="${(i * bw + bw / 2).toFixed(1)}" y="${H - 4}" text-anchor="middle">${lab}</text>` : ""}</g>`; }).join("");
+  return `<svg class="dchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Net profit by month">${bars}</svg>`;
+}
+function renderDash() {
+  const rows = dashFilter();
+  const tot = [...groupBy(rows, () => "all").values()][0] || { net: 0, units: 0, orders: 0, amount: 0 };
+  const latest = DASH.years[DASH.years.length - 1];
+  const dueOf = dk => (DASH.left[dk] || {})[latest] || 0;
+  const dues = DASH.dealerF === "both" ? Object.keys(DEALERS).reduce((s, dk) => s + dueOf(dk), 0) : dueOf(DASH.dealerF);
+  const models = [...groupBy(rows.filter(r => r.model), r => r.model).entries()].sort((a, b) => b[1].net - a[1].net).slice(0, 10);
+  const brands = [...groupBy(rows.filter(r => r.model), r => dBrand(r.model)).entries()].sort((a, b) => b[1].net - a[1].net).slice(0, 8);
+  const cats = [...groupBy(rows, r => dCategory(r.model)).entries()].sort((a, b) => b[1].net - a[1].net);
+  const plats = [...groupBy(rows, r => r.platform || "Not recorded").entries()].sort((a, b) => b[1].orders - a[1].orders).slice(0, 6);
+  const chip = (v, lab, cur, attr) => `<button class="dchip${v === cur ? " on" : ""}" data-${attr}="${v}">${lab}</button>`;
+  $("dashBox").innerHTML = `
+    <div class="dfilters">${chip("all", "All years", DASH.yearF, "dy")}${DASH.years.map(y => chip(y, y, DASH.yearF, "dy")).join("")}</div>
+    <div class="dfilters">${chip("both", "Both dealers", DASH.dealerF, "dd")}${Object.keys(DEALERS).map(dk => chip(dk, DEALERS[dk].name.split(" ")[0], DASH.dealerF, "dd")).join("")}</div>
+    <div class="kpis">
+      <div class="kpi net"><div class="lbl">Net profit</div><div class="val">${inr(tot.net)}</div></div>
+      <div class="kpi"><div class="lbl">Delivered orders</div><div class="val">${tot.orders.toLocaleString("en-IN")}</div></div>
+      <div class="kpi"><div class="lbl">Units</div><div class="val">${tot.units.toLocaleString("en-IN")}</div></div>
+      <div class="kpi"><div class="lbl">Profit per unit</div><div class="val">${inr(tot.units ? Math.round(tot.net / tot.units) : 0)}</div></div>
+      <div class="kpi"><div class="lbl">Margin on what I paid</div><div class="val">${tot.amount ? (tot.net / tot.amount * 100).toFixed(2) : "0.00"}%</div></div>
+      <div class="kpi net"><div class="lbl">Dealers owe me now</div><div class="val">${inr(dues)}</div></div>
+    </div>
+    <h3 class="dh">Net profit by month${DASH.yearF === "all" ? " (last 24 months)" : ", " + DASH.yearF}</h3>${monthChart(rows)}
+    <div class="dgrid">
+      <div><h3 class="dh">Models that made the most</h3>${models.length ? hbars(models, t => inr(t.net), t => ` · ${t.units} units`) : `<div class="empty">Nothing yet.</div>`}</div>
+      <div><h3 class="dh">Brands</h3>${hbars(brands, t => inr(t.net), t => ` · ${inr(t.units ? Math.round(t.net / t.units) : 0)}/unit`)}
+        <h3 class="dh">Product types</h3>${hbars(cats, t => inr(t.net), t => ` · ${t.units} units`)}</div>
+    </div>
+    <div class="dgrid">
+      <div><h3 class="dh">Where I buy from</h3>${hbars(plats.map(([k, t]) => [k, { ...t, net: t.orders }]), t => t.orders + " orders", () => "")}</div>
+      <div><h3 class="dh">Dealer balance (${latest} sheets)</h3>
+        <table class="list"><tr><th>Dealer</th><th class="num">Owes me</th></tr>
+        ${Object.keys(DEALERS).map(dk => `<tr><td>${esc(DEALERS[dk].name)}</td><td class="num">${inr(dueOf(dk))}</td></tr>`).join("")}</table>
+        <p class="hint">Same as the LEFT cell in each ${latest} sheet.</p></div>
+    </div>
+    <p class="hint">Updated ${DASH.loadedAt.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}. Delivered orders only, by order date. Early 2022 rows with no date use the nearest date in the same sheet.</p>`;
+}
+$("dashBox").addEventListener("click", e => {
+  const y = e.target.closest("[data-dy]"), d = e.target.closest("[data-dd]");
+  if (y) { DASH.yearF = y.dataset.dy; renderDash(); }
+  if (d) { DASH.dealerF = d.dataset.dd; renderDash(); }
+});
+$("btnDash").addEventListener("click", loadDash);
+document.querySelector('nav [data-tab="dash"]').addEventListener("click", () => { if (!DASH.loadedAt && !DASH.loading) loadDash(); });
 
 /* ======================= start ======================= */
 renderDealerSeg(); resetOrderForm(); resetPayForm(); refreshDatalists();
