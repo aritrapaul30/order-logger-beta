@@ -32,8 +32,19 @@
   .badge { background:#fff; color:var(--dark); border-radius:10px; padding:0 7px; font-size:12px; margin-left:4px; }
   .tab { display:none; flex:1; overflow-y:auto; padding:16px; }
   .tab.active { display:block; }
+  .tab { touch-action:pan-y pinch-zoom; overscroll-behavior-x:none; }
+  .scroll, details { touch-action:auto; }
+  /* phones zoom in on any box with text under 16px when you tap it: keep boxes at 16px */
+  @media (max-width:700px) { input, select, textarea { font-size:16px !important; } }
+  .ver { opacity:.6; font-size:11px; margin-left:6px; }
+  @keyframes slideL { from { transform:translateX(28px); opacity:.4; } to { transform:none; opacity:1; } }
+  @keyframes slideR { from { transform:translateX(-28px); opacity:.4; } to { transform:none; opacity:1; } }
   .panel { background:#fff; border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,.08); padding:16px; max-width:1000px; margin:0 auto 14px; }
   .panel h2 { margin:0 0 4px; font-size:16px; color:var(--dark); }
+  .nm { margin-top:12px; border:1px solid #f3d19c; background:#fffaf0; border-radius:10px; padding:8px 12px; }
+  .nm summary { cursor:pointer; font-weight:700; color:var(--warn); }
+  .nmrow { display:flex; gap:8px; align-items:flex-start; border-top:1px solid #f3e2c2; padding:7px 0; font-size:13.5px; }
+  .nmrow div { flex:1; min-width:0; overflow-wrap:anywhere; } .nmrow small { color:#5b6866; }
   .hint { font-size:13px; color:#5b6866; margin:0 0 10px; }
   textarea.paste { width:100%; min-height:130px; border:1.5px dashed #9fb7b2; border-radius:8px; padding:10px; font:14px/1.45 inherit; background:#fbfdfc; resize:vertical; }
   .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px 14px; }
@@ -43,8 +54,13 @@
   .field.missing input { background:#fdecea; border-color:#ef9a9a; }
   .field.missing label { color:#c62828; }
   .field.missing label::after { content:" · missing"; font-weight:500; font-size:11.5px; }
+  .field.force label::after { content:" · not matched, type it in"; }
   .field label { display:block; font-size:12.5px; font-weight:600; color:#40514e; margin-bottom:3px; }
   .field input, .field select { width:100%; padding:8px 10px; border:1px solid var(--line); border-radius:7px; font:inherit; background:#fff; }
+  .sgghost { position:absolute; pointer-events:none; color:#a6b2af; border:1px solid transparent; white-space:pre; overflow:hidden; display:none; z-index:2; }
+  .sgbox { position:absolute; z-index:30; background:#fff; border:1px solid var(--line); border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,.14); max-height:230px; overflow-y:auto; display:none; }
+  .sgi { padding:9px 11px; font-size:14.5px; cursor:pointer; border-bottom:1px solid #f0f3f2; }
+  .sgi:last-child { border-bottom:0; } .sgi:hover, .sgi.on { background:#e7f5f0; } .sgi b { color:var(--dark); }
   .field input:focus { outline:2px solid #9be0d0; border-color:var(--mid); }
   .field.wide { grid-column:1 / -1; }
   .field.filled input { background:#effaf5; border-color:#9fd8c4; }
@@ -102,7 +118,17 @@
   .ccard.zero .left { color:var(--ok); }
   .ccard.extra { border-top-color:#7b1fa2; background:#faf5fc; } .ccard.extra .left { color:#7b1fa2; }
   .ccard .meta { font-size:13px; color:#5b6866; margin-bottom:8px; }
-  .ccard details { margin-top:8px; font-size:13.5px; }
+  .ccard details { margin-top:8px; font-size:13.5px; overflow-x:auto; }
+  .ccard { min-width:0; }
+  .ofdcard { border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:8px; background:#fbfdfc; }
+  .ofdtop { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .ofdtop .pkg { color:var(--dark); font-size:13.5px; }
+  .ofdtop .ofdmeta { margin-left:auto; }
+  .ofdmain { margin:6px 0 2px; font-size:14.5px; }
+  .ofdmeta { font-size:12.5px; color:#5b6866; }
+  .ofdact { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:8px; flex-wrap:wrap; }
+  .ofdact label { font-size:12.5px; color:#40514e; font-weight:600; display:flex; align-items:center; gap:6px; }
+  .ofdact input[type=date] { padding:6px 8px; border:1px solid var(--line); border-radius:7px; font:inherit; font-size:14px; }
   .ccard summary { cursor:pointer; color:var(--mid); font-weight:600; }
   .ccard table td, .ccard table th { padding:4px 6px; font-size:13px; }
   dialog { border:0; border-radius:12px; padding:18px; width:min(560px, 94vw); box-shadow:0 10px 40px rgba(0,0,0,.3); }
@@ -110,6 +136,7 @@
   dialog textarea { width:100%; min-height:100px; font:13px/1.4 ui-monospace, Consolas, monospace; padding:8px; border:1px solid #ccc; border-radius:6px; }
   dialog .row { display:flex; justify-content:flex-end; gap:8px; margin-top:12px; flex-wrap:wrap; }
   .radio { display:flex; gap:14px; flex-wrap:wrap; margin:6px 0; font-size:14px; }
+  @media (max-width:430px) { .opt2 { display:none; } }
   @media (max-width:600px) { .opt { display:none; } table.list td, table.list th { padding:7px 5px; } .tab { padding:10px; } .panel { padding:13px; } header { padding:10px 12px; } }
   /* dashboard */
   .dfilters { display:flex; gap:6px; flex-wrap:wrap; margin:0 0 8px; }
@@ -147,13 +174,20 @@
   .dlegend { display:flex; flex-wrap:wrap; gap:4px 14px; font-size:12.5px; color:#5b6866; margin:6px 0 4px; }
   .dlegend i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px; }
   .dlegend b { color:#15201e; }
+  .dycards { display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:10px; margin:6px 0 12px; }
+  .dyc { background:#f4faf8; border:1px solid #d5ebe4; border-radius:10px; padding:9px 12px; position:relative; }
+  .dyc .lbl { font-size:12.5px; color:#5b6866; font-weight:700; } .dyc .val { font-size:22px; font-weight:800; } .dyc .sub { font-size:11.5px; color:#6b7a77; }
+  .dchg { position:absolute; top:8px; right:9px; font-size:11px; font-weight:800; border-radius:8px; padding:1px 7px; }
+  .dchg.slower { color:#c62828; background:#fdecea; } .dchg.faster { color:#2e7d32; background:#e8f5e9; }
+  .dchart text.dyl { font-size:11.5px; font-weight:800; fill:#075e54; }
+  .dlegend i.dash { background:none; border-top:2px dashed #075e54; height:0; width:14px; border-radius:0; vertical-align:3px; }
 </style>
 </head>
 <body>
 <header>
   <div class="who">
     <div class="avatar">DD</div>
-    <div><h1 class="brand">Digital Den</h1><small id="fileStatus">Not connected. Press Connect</small></div>
+    <div><h1 class="brand">Digital Den</h1><small><span id="fileStatus">Not connected. Press Connect</span><span class="ver" id="ver"></span></small></div>
   </div>
   <div class="hright">
     <select id="yearSel" class="yearsel" title="Year"></select>
@@ -169,6 +203,7 @@
   <button data-tab="clients">Clients Payments</button>
   <button data-tab="profit">Profit</button>
   <button data-tab="track">Tracking Search</button>
+  <button data-tab="last">Last 5 Orders</button>
   <button data-tab="dash">Dashboard</button>
 </nav>
 
@@ -185,6 +220,11 @@
     <p class="hint">Leave this empty when you're saving a new order right after placing it.</p>
     <textarea class="paste" id="pasteBox" placeholder="TODAY OUT FOR DELIVERY&#10;▪️ Parcel Name👉🏻 ...&#10;▪️ Model Name👉🏻 ...&#10;▪️ Tracking👉🏻 ...&#10;▪️ Quantity 👉🏻 ...&#10;▪️ OTP👉🏻 ...&#10;▪️ Phone No 👉🏻 ...&#10;▪️ Pin Code 👉🏻 ..."></textarea>
     <div id="pasteNote"></div>
+    <details id="nmBox" class="nm" style="display:none"><summary>Not matched (<span id="nmCount">0</span>)</summary>
+      <p class="hint">Pasted messages where the phone number, pin code or order could not be matched to a saved record. Use it to spot the odd formats people send. Saved on this device.</p>
+      <div id="nmList"></div>
+      <button class="btn small ghost" id="nmClear">Clear list</button>
+    </details>
   </div>
   <div class="panel">
     <div id="modeBar" class="mode" style="display:none"></div>
@@ -225,6 +265,12 @@
     <div id="payNote"></div>
   </div>
   <div class="panel">
+    <h2 id="lastPaysTitle">Last 5 Payments</h2>
+    <p class="hint">Newest entry first, for the dealer selected at the top. Tap Edit to fix a wrong entry.</p>
+    <div id="lastPays"><div class="empty">Press Connect to see payments.</div></div>
+    <div id="lastPayNote"></div>
+  </div>
+  <div class="panel">
     <h2>New Year Sheets</h2>
     <p class="hint">Creates next year's folder with a fresh sheet for each dealer (same layout, no orders), and carries this year's LEFT over as a negative "Previous Year Due". Payment Details stays one file.</p>
     <button class="btn ghost" id="btnNewYear">Start next year</button>
@@ -245,6 +291,11 @@
     <button class="btn small ghost" id="btnAddClient">+ Add client</button>
   </div>
   <div class="clients" id="clientCards"></div>
+  <div class="panel" style="margin-top:14px">
+    <h2>Payment Check</h2>
+    <p class="hint">Makes sure every payment a dealer made straight to a client (Bank starting with the client's name) is in Clients Payments exactly once, from that client's oldest open entry onwards, and flags entries that look entered twice.</p>
+    <div id="payCheck"></div>
+  </div>
   <div id="clientNote" style="max-width:1000px;margin:10px auto"></div>
 </section>
 
@@ -254,6 +305,15 @@
     <h2 id="profitTitle">Month-Wise Profit</h2>
     <p class="hint">Delivered orders only, by order date. Profit = Commission + Cashback + Bulk extra. Net profit = Profit − Commission cut.</p>
     <div id="profitBox"><div class="empty">Press Connect to see your profits.</div></div>
+  </div>
+</section>
+
+<!-- ============ LAST 5 ORDERS ============ -->
+<section class="tab" id="tab-last">
+  <div class="panel">
+    <h2 id="lastOrdersTitle">Last 5 Orders</h2>
+    <p class="hint">The 5 orders with the latest delivery dates for the dealer selected at the top, newest first, so you can see where your last entry was.</p>
+    <div id="lastOrders"><div class="empty">Press Connect to see your orders.</div></div>
   </div>
 </section>
 
@@ -310,6 +370,33 @@
   <div class="row"><button class="btn ghost" data-close>Cancel</button><button class="btn" id="pcSave">Save</button></div>
 </dialog>
 
+<dialog id="dlgEditPay">
+  <h3 id="epTitle">Edit Payment</h3>
+  <div class="grid">
+    <div class="field"><label class="req" for="epDate">Payment Date</label><input id="epDate" type="date"></div>
+    <div class="field"><label class="req" for="epSender">Sender</label><input id="epSender" data-list="p.sender" autocomplete="off"></div>
+    <div class="field"><label class="req" for="epBank">Bank</label><input id="epBank" data-list="p.bank" autocomplete="off"></div>
+    <div class="field"><label class="req" for="epAmount">Amount Got</label><input id="epAmount" inputmode="decimal" autocomplete="off"></div>
+  </div>
+  <div id="epNote"></div>
+  <div class="row"><button class="btn ghost" id="epDelete" style="margin-right:auto;color:var(--err)">Delete entry</button><button class="btn ghost" data-close>Cancel</button><button class="btn" id="epSave">Save changes</button></div>
+</dialog>
+
+<dialog id="dlgEditGiven">
+  <h3 id="egTitle">Edit Payment Given</h3>
+  <div class="grid">
+    <div class="field"><label class="req" for="egAmount">Amount Given</label><input id="egAmount" inputmode="decimal" autocomplete="off"></div>
+    <div class="field"><label for="egDate">Date</label><input id="egDate" type="date"></div>
+  </div>
+  <div class="radio">
+    <label><input type="radio" name="egMethod" value="paid" checked> Paid (cash / UPI / bank)</label>
+    <label><input type="radio" name="egMethod" value="cut"> Settled via dealer cut</label>
+  </div>
+  <div class="field" id="egDealerBox" style="display:none"><label for="egDealer">Deducted From Which Dealer's Payment</label><select id="egDealer"></select></div>
+  <div id="egNote"></div>
+  <div class="row"><button class="btn ghost" id="egDelete" style="margin-right:auto;color:var(--err)">Delete entry</button><button class="btn ghost" data-close>Cancel</button><button class="btn" id="egSave">Save changes</button></div>
+</dialog>
+
 <dialog id="dlgAddClient">
   <h3>Add A Client</h3>
   <p class="hint">Use the exact name you type in "Amount paid by", so their orders link automatically.</p>
@@ -360,7 +447,7 @@ const DONE_STATUSES = ["delivered", "out for delivery", "returned", "cancelled"]
 const ORDER_FIELDS = [   // [key, label, type, required, wide]   manual details first
   ["date", "Order Date", "date", true], ["by", "Order Placed By", "text", true], ["platform", "Platform", "text", true],
   ["model", "Model", "text"], ["qty", "Quantity", "number"],
-  ["card", "Card Details", "text"], ["paid_by", "Amount Paid By", "text", true],
+  ["card", "Card Details", "text", true], ["paid_by", "Amount Paid By", "text", true],
   ["amount", "Amount", "number", true], ["return", "Return Amount", "number", true], ["commission", "Commission", "number"],
   ["commission_cut", "Commission Cut", "number"], ["have_to_return", "I Have To Return", "number"],
   ["cashback", "Cashback", "number"], ["bulk_extra", "Bulk Extra", "number"], ["status", "Delivery Status", "text"],
@@ -440,13 +527,26 @@ let year = lsGet("year", "");   // "" = latest year folder
 let YEARS = [], MISSING = [];
 let connected = false;
 
-async function api(req, cfg = remote) {
+async function apiOnce(req, cfg) {
   let r;
   try { r = await fetch(cfg.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ year, ...req, key: cfg.key }) }); }
   catch (e) { throw new Error("Couldn't reach your Google Sheets. Check the internet connection and try again."); }
   let j; try { j = await r.json(); } catch (e) { throw new Error("The web app link didn't answer properly. Check it under Connect."); }
-  if (!j.ok) throw new Error(j.error || "Google Sheets error");
+  if (!j.ok) { const err = new Error(j.error || "Google Sheets error"); err.conflict = !!j.conflict; throw err; }
+  return j;
+}
+async function api(req, cfg = remote) {
+  let j;
+  if (req.action === "read" && !req.parts) {
+    // Each dealer and Payment Details is its own file: asking for them side by side is about twice as fast.
+    const groups = [...Object.keys(DEALERS).map(k => [k]), ["clients", "history"]];
+    const all = await Promise.all(groups.map(p => apiOnce({ ...req, parts: p }, cfg)));
+    j = { ...all[0], data: Object.assign({}, ...all.map(x => x.data || {})) };
+    if (all.some(x => x.year !== j.year)) j = await apiOnce(req, cfg);   // a new year was started in between: read again in one go
+  } else j = await apiOnce(req, cfg);
   if (j.years) { YEARS = j.years; MISSING = j.missing || []; if (j.year && year && j.year !== year) { year = j.year; lsSet("year", year); } renderYear(); }
+  if (j.data && j.year) DATA_YEAR = j.year;
+  if (j.data && req.action !== "write" && !req.parts) keepCopy(j);
   return j;
 }
 
@@ -501,18 +601,35 @@ class RemoteSheet {
 }
 const sheetsFrom = data => Object.fromEntries(Object.entries(data).map(([k, v]) => [k, new RemoteSheet(k, v.values)]));
 
-/* read everything -> fn(sheets) edits -> write -> relearn */
-async function withData(fn) {
+/* A copy of the last data is kept on this device so the app opens instantly; it is replaced every time
+   the sheets answer, and removed by Disconnect. */
+let DATA_YEAR = null, DATA_SEQ = 0;   // which year DATA holds; DATA_SEQ changes whenever DATA does
+function keepCopy(j) { try { localStorage.setItem(LS + "copy", JSON.stringify({ at: Date.now(), year: j.year, years: j.years, missing: j.missing, data: j.data })); } catch (e) {} }
+function keptCopy() { try { return JSON.parse(localStorage.getItem(LS + "copy") || "null"); } catch (e) { return null; } }
+function forgetCopies() { try { Object.keys(localStorage).filter(k => k === LS + "copy" || k.startsWith(LS + "dash_")).forEach(k => localStorage.removeItem(k)); } catch (e) {} }
+
+/* edits -> write -> relearn. Edits start from the data already on screen, so a save is one trip to
+   Google instead of two. The sheet checks every changed cell against what this device saw; if another
+   device changed it meanwhile, we read fresh data and redo the edit once. { reload: true } reads first. */
+async function withData(fn, opts = {}) {
   if (!remote) throw new Error("Press Connect at the top first.");
-  const S = sheetsFrom((await api({ action: "read" })).data);
-  const res = (await fn(S)) || {};
-  const changes = Object.values(S).flatMap(s => s.changes);
-  if (res.save !== false && changes.length) {
-    const out = await api({ action: "write", changes });
-    DATA = out.data; res.saved = true;
-  } else if (!res.cancelled) DATA = Object.fromEntries(Object.entries(S).map(([k, s]) => [k, { values: s.grid, name: (DATA && DATA[k] && DATA[k].name) || "" }]));
-  learn();
-  return res;
+  let onScreen = !opts.reload && !!DATA && !!DATA_YEAR && (!year || DATA_YEAR === year);
+  for (;;) {
+    const base = onScreen ? DATA : (await api({ action: "read" })).data;
+    const S = sheetsFrom(base);
+    const res = (await fn(S)) || {};
+    const changes = Object.values(S).flatMap(s => s.changes);
+    if (res.save !== false && changes.length) {
+      try {
+        const out = await api({ action: "write", changes, year: DATA_YEAR || year, reply: "changed" });
+        DATA = { ...base, ...out.data }; res.saved = true;
+        keepCopy({ year: DATA_YEAR, years: YEARS, missing: MISSING, data: DATA });
+      } catch (e) { if (onScreen && e.conflict) { onScreen = false; continue; } throw e; }
+    } else if (!res.cancelled) DATA = Object.fromEntries(Object.entries(S).map(([k, s]) => [k, { values: s.grid, name: (base && base[k] && base[k].name) || (DATA && DATA[k] && DATA[k].name) || "" }]));
+    DATA_SEQ++;
+    learn();
+    return res;
+  }
 }
 
 /* ======================= learn: everything the screens need ======================= */
@@ -553,6 +670,9 @@ function learnDealer(sh) {
     }
   }
   D.money = { toGet, got, due: toGet - got, pending };
+  D.payments = [];
+  for (const n of nums) if (n >= FIRST_DATA_ROW && Object.values(PAYMENT_COLS).some(c => sh.value(n, c) !== null))
+    D.payments.push({ row: n, date: sh.date(n, PAYMENT_COLS.date), sender: sh.value(n, PAYMENT_COLS.sender), bank: sh.value(n, PAYMENT_COLS.bank), amount: num(sh.value(n, PAYMENT_COLS.amount)) });
   return D;
 }
 
@@ -626,7 +746,7 @@ function buildForm(container, fields, prefix) {
 }
 function fieldHtml([k, label, type, req, wide], prefix) {
   return `<div class="field${wide ? " wide" : ""}${k === "pin" ? " hidden" : ""}" id="f-${prefix}${k}"><label class="${req ? "req" : ""}" for="${prefix}${k}">${label}</label>
-     <input id="${prefix}${k}" type="${type === "date" ? "date" : "text"}" ${type === "number" ? 'inputmode="decimal"' : ""} ${NO_LIST.has(k) ? "" : `list="dl-${prefix}${k}"`} autocomplete="off">
+     <input id="${prefix}${k}" type="${type === "date" ? "date" : "text"}" ${type === "number" ? 'inputmode="decimal"' : ""} ${NO_LIST.has(k) ? "" : `data-list="${prefix}${k}"`} autocomplete="off">
      ${k === "pin" ? '<small>Picks the saved address for this pin</small>' : ""}${k === "commission" ? '<small>Return − Amount. Type any two of the three</small>' : ""}${k === "have_to_return" ? '<small>Amount + Commission cut. Fill either one</small>' : ""}${k === "paid_by" ? '<small>Whose card paid. Links to Clients Payments</small>' : ""}</div>`;
 }
 buildForm("orderForm", ORDER_FIELDS, "o.");
@@ -639,9 +759,88 @@ function refreshDatalists() {
     const f = key.slice(2), vals = [...new Set([...(hist[key] || []), ...(L.lists[key] || []), ...(DEFAULT_LISTS[f] || [])])];
     const allNum = vals.length && vals.every(v => /^-?\d+(\.\d+)?$/.test(v));
     vals.sort(allNum ? (x, y) => x - y : (x, y) => x.localeCompare(y, undefined, { sensitivity: "base", numeric: true }));
-    return `<datalist id="dl-${key}">${vals.slice(0, 400).map(v => `<option value="${esc(v)}">`).join("")}</datalist>`;
+    SUGG[key] = vals;
+    return "";
   }).join("");
 }
+
+/* ---- suggestions: grey auto-complete inside the box + a list that narrows as you type ---- */
+const SUGG = {};
+const sgNorm = v => String(v).toLowerCase().replace(/\s+/g, " ").trim();
+function sgMatches(key, typed) {
+  const all = SUGG[key] || [], q = sgNorm(typed);
+  if (!q) return all.slice(0, 50);
+  const words = q.split(" "), out = [];
+  for (const v of all) {
+    const n = sgNorm(v); if (n === q) continue;
+    const vw = n.split(/[\s\-\/,.()]+/);
+    let score;
+    if (n.startsWith(q)) score = 0;                                                       // starts with what you typed
+    else if (words.every(w => vw.some(x => x.startsWith(w)))) score = 1;                  // every typed word starts a word
+    else if (words.every(w => n.includes(w))) score = 2;                                  // every typed word appears
+    else continue;
+    out.push([score, v]);
+  }
+  return out.sort((a, b) => a[0] - b[0]).slice(0, 30).map(x => x[1]);
+}
+const sg = { inp: null, box: null, ghost: null, items: [], hi: -1 };
+function sgEnsure(inp) {
+  const wrap = inp.parentElement; wrap.style.position = "relative";
+  if (!inp._ghost) { const g = document.createElement("div"); g.className = "sgghost"; wrap.appendChild(g); inp._ghost = g; }
+  if (!sg.box) { sg.box = document.createElement("div"); sg.box.className = "sgbox"; sg.box.addEventListener("mousedown", e => e.preventDefault());
+    sg.box.addEventListener("click", e => { const b = e.target.closest("[data-i]"); if (b) sgPick(sg.items[+b.dataset.i]); }); }
+  if (sg.box.parentElement !== wrap) wrap.appendChild(sg.box);
+}
+function sgUpdate(inp) {
+  if (inp.readOnly || inp.disabled) { sgHide(); return; }
+  sgEnsure(inp); sg.inp = inp;
+  const typed = inp.value, items = sgMatches(inp.dataset.list, typed);
+  sg.items = items; sg.hi = -1;
+  // grey completion: the best match that starts with exactly what you typed
+  const g = inp._ghost, first = typed && items.find(v => v.toLowerCase().startsWith(typed.toLowerCase()));
+  const atEnd = inp.selectionStart === typed.length;
+  if (first && atEnd && inp.scrollWidth <= inp.clientWidth + 1) {
+    const cs = getComputedStyle(inp);
+    Object.assign(g.style, { left: inp.offsetLeft + "px", top: inp.offsetTop + "px", width: inp.offsetWidth + "px", height: inp.offsetHeight + "px",
+      padding: cs.padding, font: cs.font, borderWidth: cs.borderWidth, lineHeight: cs.lineHeight, display: "block" });
+    g.innerHTML = `<span style="color:transparent">${esc(typed)}</span>${esc(first.slice(typed.length))}`;
+    inp._ghostVal = first;
+  } else { g.style.display = "none"; inp._ghostVal = null; }
+  if (!items.length) { sg.box.style.display = "none"; return; }
+  sg.box.style.top = (inp.offsetTop + inp.offsetHeight + 2) + "px"; sg.box.style.left = inp.offsetLeft + "px"; sg.box.style.width = inp.offsetWidth + "px";
+  const q = sgNorm(typed).split(" ").filter(Boolean);
+  const mark = v => q.length ? esc(v).replace(new RegExp("(" + q.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")", "gi"), "<b>$1</b>") : esc(v);
+  sg.box.innerHTML = items.map((v, i) => `<div class="sgi" data-i="${i}">${mark(v)}</div>`).join("") + (typed ? "" : "");
+  sg.box.style.display = "block";
+}
+function sgHide() { if (sg.box) sg.box.style.display = "none"; if (sg.inp && sg.inp._ghost) sg.inp._ghost.style.display = "none"; sg.items = []; }
+function sgPick(v) {
+  const inp = sg.inp; if (!inp || v == null) return;
+  inp.value = v; sgHide();
+  inp.dispatchEvent(new Event("input", { bubbles: true })); inp.dispatchEvent(new Event("change", { bubbles: true }));
+  sgHide();
+}
+function sgHighlight(d) {
+  if (!sg.items.length) return;
+  sg.hi = (sg.hi + d + sg.items.length) % sg.items.length;
+  [...sg.box.children].forEach((c, i) => c.classList.toggle("on", i === sg.hi));
+  sg.box.children[sg.hi].scrollIntoView({ block: "nearest" });
+}
+document.addEventListener("focusin", e => { if (e.target.dataset && e.target.dataset.list) sgUpdate(e.target); });
+document.addEventListener("input", e => { if (e.target.dataset && e.target.dataset.list && e.isTrusted) sgUpdate(e.target); });
+document.addEventListener("click", e => { if (e.target.dataset && e.target.dataset.list && e.target === document.activeElement) sgUpdate(e.target); });
+document.addEventListener("focusout", e => { if (e.target.dataset && e.target.dataset.list) setTimeout(() => { if (document.activeElement !== e.target) sgHide(); }, 120); });
+document.addEventListener("keydown", e => {
+  const inp = e.target; if (!inp.dataset || !inp.dataset.list || inp !== sg.inp) return;
+  const open = sg.box && sg.box.style.display === "block";
+  if (e.key === "ArrowDown" && open) { e.preventDefault(); sgHighlight(1); }
+  else if (e.key === "ArrowUp" && open) { e.preventDefault(); sgHighlight(-1); }
+  else if (e.key === "Enter" && open && sg.hi >= 0) { e.preventDefault(); sgPick(sg.items[sg.hi]); }
+  else if ((e.key === "Tab" || e.key === "ArrowRight" || e.key === "Enter") && inp._ghostVal && inp.selectionStart === inp.value.length && inp.value !== inp._ghostVal) {
+    if (e.key !== "Tab") e.preventDefault(); sgPick(inp._ghostVal);
+  }
+  else if (e.key === "Escape") sgHide();
+});
 
 let editRow = null;        // row number being completed, or null for a new order
 let ticked = new Set();    // other rows in the same package (same message, different cards)
@@ -675,6 +874,7 @@ function resetOrderForm(keepPaste) {
   field("o.", "qty").value = "1";
   if (!keepPaste) { $("pasteBox").value = ""; $("pasteNote").innerHTML = ""; }
   trioOrder = []; editRow = null; editOrig = null; ticked = new Set(); pkgQty = 0;
+  if (!keepPaste) forceReq.clear();
   updateMode(); markMissing();
 }
 function updateMode() {
@@ -788,9 +988,10 @@ function parseOfdMessage(text) {
 let lastPaste = null;
 const sameModel = (a, b) => { const x = normModel(a), y = normModel(b); return x && y && (x === y || x.includes(y) || y.includes(x)); };
 function applyPaste() {
-  const text = $("pasteBox").value; if (!text.trim()) { lastPaste = null; return; }
+  const text = $("pasteBox").value; if (!text.trim()) { lastPaste = null; forceReq.clear(); markMissing(); return; }
   const { data, unknown } = parseOfdMessage(text);
-  if (!Object.keys(data).length) { note("pasteNote", "err", "Couldn't find Parcel Name, Model, Tracking etc. in that text."); return; }
+  pasteIssues = []; forceReq.clear();
+  if (!Object.keys(data).length) { note("pasteNote", "err", "Couldn't find Parcel Name, Model, Tracking etc. in that text."); nmAdd([{ what: "Message not read", value: text.trim().split(/\r?\n/)[0].slice(0, 60) }], data); return; }
   lastPaste = data;
   const D = L.dealers[dealer] || { incomplete: [], tracking: {} };
   pkgQty = Math.max(1, parseInt(String(data.qty || "1").replace(/\D/g, ""), 10) || 1);
@@ -814,15 +1015,21 @@ function applyPaste() {
     } else if (!field("o.", "model").value) setField("model", data.model, true);
   }
   if (data.mobile && !field("o.", "mobile").readOnly) { const n = fillMobile(data.mobile, true); if (n) notes.push(n); }
+  if (data.mobile) { const r = resolveMobile(data.mobile, field("o.", "name").value); if (!r.full) forceReq.set("mobile", r.choices ? "pick one of the saved numbers or type the full number" : "no saved number matched, type the full 10-digit number"); if (r.none) pasteIssues.push({ what: r.digits.length >= 3 && r.digits.length <= 6 ? "Phone: no saved number ends in these digits" : "Phone: odd format", value: data.mobile }); }
+  if (data.pin) { const pd = data.pin.replace(/\D/g, ""); if (!/^\d{6}$/.test(data.pin.trim())) pasteIssues.push({ what: "Pin code: odd format", value: data.pin }); else if (!L.pinAddr[pd] && !(hist["o.address"] || []).some(a => a.includes(pd)) && !Object.values(addrMap).some(a => a.includes(pd))) pasteIssues.push({ what: "Pin code: no saved address", value: data.pin }); }
+  if (data.pin && !field("o.", "address").value.trim()) forceReq.set("address", "no saved address for this pin, type it once");
+  if (!/rupay/i.test(field("o.", "platform").value)) for (const [k, l] of [["name", "Parcel Name"], ["tracking", "Tracking ID"], ["mobile", "Phone No"]])
+    if (!data[k] && !field("o.", k).value.trim() && !forceReq.has(k)) { forceReq.set(k, "not in the message, type it in"); pasteIssues.push({ what: `${l} missing in message`, value: data.name || data.tracking || "" }); }
   const w = applyPin(); if (w) notes.push({ kind: "warn", html: w });
   if (!field("o.", "platform").value) setField("platform", guessPlatform(data.tracking));
   const st = field("o.", "status").value.trim().toLowerCase();
   if (!st || st === ORDERED.toLowerCase()) field("o.", "status").value = OFD;
   if (!field("o.", "delivery_date").value) setField("delivery_date", today());
-  if (unknown.length) notes.push({ kind: "warn", html: `Ignored: ${unknown.map(esc).join(", ")}` });
+  if (unknown.length) { notes.push({ kind: "warn", html: `Ignored: ${unknown.map(esc).join(", ")}` }); pasteIssues.push({ what: "Unknown label", value: unknown.join(", ") }); }
   if (!editRow) {
     const cands = D.incomplete.filter(r => data.model && r.model && sameModel(r.model, data.model));
     renderIncomplete(cands.map(r => r.row));
+    if (!cands.length && D.incomplete.length) pasteIssues.push({ what: "No saved order matched", value: [data.model, data.tracking].filter(Boolean).join(" · ") || "(no model or tracking)" });
     if (cands.length) notes.unshift({ kind: "warn", html: `👆 ${cands.length === 1 ? "This looks like" : "This could be one of"} your saved order${cands.length > 1 ? "s" : ""}: ` +
       cands.map(r => `<button class="btn small pick" data-row="${r.row}">Row ${r.row} · ${fmtDate(r.dateObj)} · ${esc(r.card || "no card")}</button>`).join("") + `<br>Tap the right one, or ignore this to save it as a new row.` });
     if (data.tracking && D.tracking[data.tracking.trim().toUpperCase()]) notes.push({ kind: "warn", html: `⚠ Tracking ${esc(data.tracking)} is already in the sheet. You'll be asked what to do when you save.` });
@@ -831,7 +1038,30 @@ function applyPaste() {
   notes.unshift({ kind: "ok", html: editRow ? `✔ Message added to ${ticked.size ? `rows ${[editRow, ...ticked].join(", ")}` : `row ${editRow}`}. Check the boxes and press Update.` : "✔ Filled from the message." });
   updateMode();
   $("pasteNote").innerHTML = notes.map(n => `<div class="note ${n.kind}">${n.html}</div>`).join("");
+  nmAdd(pasteIssues, data);
 }
+
+/* ---- "not matched" list: pastes whose number, pin or order found no saved record ---- */
+let pasteIssues = [], nmTimer = null;
+const forceReq = new Map();   // boxes the message couldn't fill or match: must be typed before saving
+const nmLoad = () => { try { return JSON.parse(lsGet("notmatched", "[]")); } catch (e) { return []; } };
+function nmAdd(issues, data) {   // waits until the paste box is still, so half-typed text isn't logged
+  clearTimeout(nmTimer);
+  if (!issues.length) return;
+  nmTimer = setTimeout(() => {
+    const list = nmLoad(), when = new Date().toISOString(), ctx = [data.name, data.tracking].filter(Boolean).join(" · ");
+    for (const x of issues) if (!list.some(y => y.what === x.what && y.value === x.value)) list.unshift({ ...x, ctx, when, dealer });
+    lsSet("notmatched", JSON.stringify(list.slice(0, 60))); renderNotMatched();
+  }, 1500);
+}
+function renderNotMatched() {
+  const list = nmLoad();
+  $("nmBox").style.display = list.length ? "" : "none"; $("nmCount").textContent = list.length;
+  $("nmList").innerHTML = list.map((x, i) => `<div class="nmrow"><div><b>${esc(x.what)}</b>: ${esc(x.value)}<br><small>${fmtDate(new Date(x.when))}${x.dealer && DEALERS[x.dealer] ? " · " + esc(DEALERS[x.dealer].name) : ""}${x.ctx ? " · " + esc(x.ctx) : ""}</small></div><button class="btn small ghost" data-nm="${i}">✕</button></div>`).join("");
+}
+$("nmList").addEventListener("click", e => { if (e.target.dataset.nm === undefined) return; const l = nmLoad(); l.splice(+e.target.dataset.nm, 1); lsSet("notmatched", JSON.stringify(l)); renderNotMatched(); });
+$("nmClear").addEventListener("click", () => { if (confirm("Clear the not matched list?")) { lsSet("notmatched", "[]"); renderNotMatched(); } });
+renderNotMatched();
 $("pasteBox").addEventListener("input", () => { applyPaste(); markMissing(); });
 
 /* ---- open an incomplete row ---- */
@@ -861,7 +1091,8 @@ function selectRow(n, extra = []) {
 /* red tint on the boxes an incomplete row still needs */
 const NEEDED = ["date", "by", "platform", "model", "card", "paid_by", "amount", "return", "name", "mobile", "tracking", "delivery_date", "address"];
 function markMissing() {
-  for (const [k] of ORDER_FIELDS) $("f-o." + k).classList.remove("missing");
+  for (const [k] of ORDER_FIELDS) $("f-o." + k).classList.remove("missing", "force");
+  for (const k of forceReq.keys()) if (!field("o.", k).value.trim()) $("f-o." + k).classList.add("missing", "force");
   if (!editRow) return;
   const rupay = /rupay/i.test(field("o.", "platform").value);
   for (const k of NEEDED) {
@@ -871,8 +1102,8 @@ function markMissing() {
   const st = field("o.", "status").value.trim().toLowerCase();
   if (!st || st === ORDERED.toLowerCase()) $("f-o.status").classList.add("missing");
 }
-$("orderForm").addEventListener("input", () => { if (editRow) markMissing(); });
-$("orderForm").addEventListener("change", () => { if (editRow) markMissing(); });
+$("orderForm").addEventListener("input", () => markMissing());
+$("orderForm").addEventListener("change", () => markMissing());
 
 function renderIncomplete(cands = []) {
   const D = L.dealers[dealer];
@@ -927,7 +1158,7 @@ function readOrderForm() {
   for (const [k, label, type, req] of ORDER_FIELDS) {
     if (k === "pin" || k === "have_to_return") continue;
     const raw = field("o.", k).value.trim();
-    if (!raw) { if (req) problems.push(`${label} is empty`); continue; }
+    if (!raw) { if (req) problems.push(`${label} is empty`); else if (forceReq.has(k)) problems.push(`${label}: ${forceReq.get(k)}`); continue; }
     try {
       if (k === "mobile" && raw.replace(/\D/g, "").length !== 10) throw new Error("should be a full 10-digit number");
       if (type === "date") data[k] = fromIso(raw);
@@ -1049,11 +1280,14 @@ function renderOfd() {
   $("ofdCount").textContent = D ? ofdGroups(D).length : 0;
   if (!connected || !D) return;
   if (!D.ofd.length) { $("ofdList").innerHTML = `<div class="empty">Nothing is out for delivery right now.</div>`; return; }
-  $("ofdList").innerHTML = `<div class="scroll"><table class="list"><tr><th>Row</th><th class="opt">Order date</th><th>Parcel</th><th>Model</th><th class="opt">Paid by</th><th class="opt">Tracking</th><th>Delivered on</th><th></th></tr>` +
-    ofdGroups(D).map((g, i) => { const o = g.rows[0], many = g.rows.length > 1;
-      return `<tr><td>${g.rows.map(r => r.row).join(", ")}</td><td class="opt">${fmtDate(o.dateObj)}</td><td>${esc(o.name || "")}${many ? `<br><b>📦 ${g.rows.length} phones</b>` : ""}</td>
-      <td>${esc([...new Set(g.rows.map(r => r.model || ""))].join(", "))}</td><td class="opt">${esc(g.rows.map(r => r.paid_by || "").join(", "))}</td><td class="opt">${esc(g.tracking)}</td>
-      <td><input type="date" value="${isoDate(today())}" id="dd-${i}"></td><td><button class="btn small" data-g="${i}" data-rows="${g.rows.map(r => r.row).join(",")}" data-tracking="${esc(g.tracking)}">${many ? `Delivered (${g.rows.length})` : "Delivered"}</button></td></tr>`; }).join("") + `</table></div>`;
+  $("ofdList").innerHTML = ofdGroups(D).map((g, i) => { const o = g.rows[0], many = g.rows.length > 1;
+    return `<div class="ofdcard">
+      <div class="ofdtop"><span class="rowno">${many ? "Rows" : "Row"} ${g.rows.map(r => r.row).join(", ")}</span>${many ? `<b class="pkg">📦 ${g.rows.length} phones</b>` : ""}<span class="ofdmeta">Ordered ${fmtDate(o.dateObj)}</span></div>
+      <div class="ofdmain"><b>${esc(o.name || "")}</b> · ${esc([...new Set(g.rows.map(r => r.model || ""))].join(", "))}</div>
+      <div class="ofdmeta">${esc(g.tracking)}${g.rows.some(r => r.paid_by) ? ` · paid by ${esc(g.rows.map(r => r.paid_by || "").join(", "))}` : ""}</div>
+      <div class="ofdact"><label>Delivered on <input type="date" value="${isoDate(today())}" id="dd-${i}"></label>
+        <button class="btn small" data-g="${i}" data-rows="${g.rows.map(r => r.row).join(",")}" data-tracking="${esc(g.tracking)}">${many ? `Delivered (${g.rows.length})` : "Delivered"}</button></div>
+    </div>`; }).join("");
 }
 $("ofdList").addEventListener("click", async e => {
   const b = e.target.closest("button[data-rows]"); if (!b) return;
@@ -1076,6 +1310,42 @@ $("ofdList").addEventListener("click", async e => {
     note("ofdNote", "ok", `✔ Row${res.done.length > 1 ? "s" : ""} ${res.done.join(", ")} marked Delivered.` + res.clients.map(c => `<br>${c.ok ? "✔" : "⚠"} ${esc(c.text)}`).join(""));
   } catch (err) { note("ofdNote", "err", esc(err.message)); b.disabled = false; }
 });
+
+/* ======================= dealer <-> client payment link =======================
+   A dealer payment whose Bank is a client's name = the dealer paid that client directly.
+   It is mirrored in Payment Details as Given = amount, Date = payment date (the usual way).
+   The pair is matched by client + amount + date, so each side is written only once. */
+const clientBlock = (S, name) => name ? parseClients(S.clients).find(b => normName(b.name) === normName(name)) : null;
+/* Bank text that starts with a client's name ("Arko Da", "Arko Da SBI Cash Deposit") belongs to that client; longest name wins */
+function bankStartsWith(bank, client) {
+  const t = String(bank || "").trim().toLowerCase().replace(/\s+/g, " "), n = String(client || "").trim().toLowerCase().replace(/\s+/g, " ");
+  return !!n && (t === n || (t.startsWith(n) && !/[a-z0-9]/.test(t[n.length])));
+}
+function clientForBank(blocks, bank) {
+  let best = null;
+  for (const b of blocks) if (bankStartsWith(bank, b.name) && (!best || b.name.length > best.name.length)) best = b;
+  return best;
+}
+const bankBlock = (S, bank) => bank ? clientForBank(parseClients(S.clients), bank) : null;
+const same$ = (a, b) => a !== null && b !== null && a !== undefined && b !== undefined && Math.abs(a - b) < 0.5;
+const sameDay = (a, b) => a instanceof Date && b instanceof Date && isoDate(a) === isoDate(b);
+function clientLinkRows(blk, date, amount) {
+  return blk.entries.filter(e => same$(e.given, amount) && sameDay(e.gdate, date)).map(e => e.row);
+}
+function dealerLinkRows(sh, client, date, amount) {
+  const out = [];
+  for (const n of sh.rows.keys()) if (n >= FIRST_DATA_ROW && sameDay(sh.date(n, PAYMENT_COLS.date), date) &&
+    same$(num(sh.value(n, PAYMENT_COLS.amount)), amount) && bankStartsWith(sh.value(n, PAYMENT_COLS.bank), client)) out.push(n);
+  return out.sort((a, b) => a - b);
+}
+function addClientGiven(S, blk, amount, dateVal) {
+  const cl = S.clients, last = cl.lastRow([blk.givenCol, blk.dateCol]), r = last + 1, st = last >= FIRST_DATA_ROW ? last : 0;
+  cl.set(r, blk.givenCol, amount, st); cl.set(r, blk.dateCol, dateVal, st);
+  blk.entries.push({ row: r, given: amount, gdate: dateVal });
+  return r;
+}
+function clearClientRow(S, blk, r) { S.clients.set(r, blk.givenCol, null); S.clients.set(r, blk.dateCol, null); blk.entries = blk.entries.filter(e => e.row !== r); }
+function clearDealerRow(S, k, r) { for (const col of Object.values(PAYMENT_COLS)) S[k].set(r, col, null); }
 
 /* ======================= dealer payments + profit ======================= */
 function renderMoney() {
@@ -1102,10 +1372,10 @@ function renderMoney() {
       <div class="kpi"><div class="lbl">Commission cut, all months</div><div class="val">${inr(tot.cut)}</div></div>
       <div class="kpi net"><div class="lbl">All dealers, net profit</div><div class="val">${inr(allNet)}</div></div>
     </div>
-    <div class="scroll"><table class="list"><tr><th>Month</th><th class="num">Orders</th><th class="num">Commission</th><th class="num opt">Cashback</th><th class="num opt">Bulk extra</th><th class="num">Comm. cut</th><th class="num">Net profit</th><th class="opt" style="width:20%"></th></tr>` +
+    <div class="scroll"><table class="list"><tr><th>Month</th><th class="num opt2">Orders</th><th class="num">Commission</th><th class="num opt">Cashback</th><th class="num opt">Bulk extra</th><th class="num opt2">Comm. cut</th><th class="num">Net profit</th><th class="opt" style="width:20%"></th></tr>` +
     keys.map(k => { const m = months[k], n = net(m);
-      return `<tr><td>${label(k)}</td><td class="num">${m.orders}</td><td class="num">${inr(m.com)}</td><td class="num opt">${inr(m.cb)}</td><td class="num opt">${inr(m.bx)}</td><td class="num">${inr(m.cut)}</td><td class="num ${n < 0 ? "neg" : ""}"><b>${inr(n)}</b></td><td class="opt"><div class="bar" style="width:${Math.abs(n) / max * 100}%;${n < 0 ? "background:var(--err)" : ""}"></div></td></tr>`; }).join("") +
-    `<tr class="total"><td>Total</td><td class="num">${tot.orders}</td><td class="num">${inr(tot.com)}</td><td class="num opt">${inr(tot.cb)}</td><td class="num opt">${inr(tot.bx)}</td><td class="num">${inr(tot.cut)}</td><td class="num">${inr(net(tot))}</td><td class="opt"></td></tr></table></div>`;
+      return `<tr><td>${label(k)}</td><td class="num opt2">${m.orders}</td><td class="num">${inr(m.com)}</td><td class="num opt">${inr(m.cb)}</td><td class="num opt">${inr(m.bx)}</td><td class="num opt2">${inr(m.cut)}</td><td class="num ${n < 0 ? "neg" : ""}"><b>${inr(n)}</b></td><td class="opt"><div class="bar" style="width:${Math.abs(n) / max * 100}%;${n < 0 ? "background:var(--err)" : ""}"></div></td></tr>`; }).join("") +
+    `<tr class="total"><td>Total</td><td class="num opt2">${tot.orders}</td><td class="num">${inr(tot.com)}</td><td class="num opt">${inr(tot.cb)}</td><td class="num opt">${inr(tot.bx)}</td><td class="num opt2">${inr(tot.cut)}</td><td class="num">${inr(net(tot))}</td><td class="opt"></td></tr></table></div>`;
 }
 function resetPayForm() { for (const [k] of PAY_FIELDS) field("p.", k).value = ""; field("p.", "date").value = isoDate(today()); }
 $("btnAddPay").addEventListener("click", async () => {
@@ -1119,12 +1389,23 @@ $("btnAddPay").addEventListener("click", async () => {
   $("btnAddPay").disabled = true;
   try {
     const res = await withData(S => {
+      const blk = bankBlock(S, data.bank);
+      if (blk && dealerLinkRows(S[dealer], blk.name, data.date, data.amount).length &&
+          !confirm(`${DEALERS[dealer].name} already has a payment of ${inr(data.amount)} to ${blk.name} on ${fmtDate(data.date)}. Add another one?`)) return { save: false, cancelled: true };
       const sh = S[dealer], last = sh.lastRow(Object.values(PAYMENT_COLS)), row = last + 1;
       for (const [f, col] of Object.entries(PAYMENT_COLS)) sh.set(row, col, data[f], last >= FIRST_DATA_ROW ? last : 0);
-      return { row };
+      let link = null;
+      if (blk) {
+        const haveC = clientLinkRows(blk, data.date, data.amount).length;
+        const haveD = Object.keys(DEALERS).reduce((t, k) => t + (S[k] ? dealerLinkRows(S[k], blk.name, data.date, data.amount).length : 0), 0);
+        if (haveC >= haveD) link = `Already in ${blk.name}'s Clients Payments, so not added again.`;
+        else { const r = addClientGiven(S, blk, data.amount, data.date); link = `Also added to ${blk.name}'s Clients Payments as given ${inr(data.amount)} on ${fmtDate(data.date)} (row ${r}).`; }
+      }
+      return { row, link };
     });
+    if (res.cancelled) { note("payNote", "warn", "Nothing was added."); return; }
     remember("p.", data); refreshDatalists();
-    note("payNote", "ok", `✔ Added in row ${res.row}: ${esc(data.sender)} → ${esc(data.bank)}, ${inr(data.amount)}.`);
+    note("payNote", "ok", `✔ Added in row ${res.row}: ${esc(data.sender)} → ${esc(data.bank)}, ${inr(data.amount)}.` + (res.link ? `<br>🔗 ${esc(res.link)}` : ""));
     resetPayForm();
   } catch (e) { note("payNote", "err", esc(e.message)); }
   finally { $("btnAddPay").disabled = false; }
@@ -1145,7 +1426,7 @@ function renderClients() {
   $("clientsSub").textContent = `${C.filter(b => Math.round(b.left) > 0).length} of ${C.length} clients still have money to get.` + (adv ? ` You will get back ${inr(adv)} from clients you gave extra (net ${inr(total)}).` : "");
   $("clientCards").innerHTML = C.map((b, i) => {
     const zero = Math.round(b.left) === 0, extra = Math.round(b.left) < 0;
-    const rows = b.entries.map(e => `<tr><td>${fmtDate(e.od)}</td><td class="num">${e.amt !== null ? inr(e.amt) : ""}</td><td class="num">${e.given !== null ? inr(e.given) : ""}</td><td>${esc(fmtDate(e.gdate))}</td></tr>`).join("");
+    const rows = b.entries.map(e => `<tr><td>${fmtDate(e.od)}</td><td class="num">${e.amt !== null ? inr(e.amt) : ""}</td><td class="num">${e.given !== null ? inr(e.given) : ""}</td><td>${esc(fmtDate(e.gdate))}</td><td>${e.given !== null || e.gdate ? `<button class="btn small ghost" data-editgiven="${i}:${e.row}">Edit</button>` : ""}</td></tr>`).join("");
     return `<div class="ccard ${zero ? "zero" : extra ? "extra" : ""}">
       <h3>${esc(b.name)}</h3>
       <div class="left">${inr(b.left)}</div>
@@ -1155,7 +1436,7 @@ function renderClients() {
         <button class="btn small ghost" data-stmt="${i}">Share statement</button>
         <button class="btn small ${zero ? "" : "ghost"}" data-settle="${i}" ${b.entries.length ? "" : "disabled"}>Mark settled</button>
       </div>
-      ${b.entries.length ? `<details><summary>Details</summary><table class="list"><tr><th>Order date</th><th class="num">Transaction</th><th class="num">Given</th><th>Date</th></tr>${rows}</table></details>` : ""}
+      ${b.entries.length ? `<details><summary>Details</summary><table class="list"><tr><th>Order date</th><th class="num">Transaction</th><th class="num">Given</th><th>Date</th><th></th></tr>${rows}</table></details>` : ""}
     </div>`; }).join("") || `<div class="empty">No clients found in Payment Details.</div>`;
 }
 $("clientCards").addEventListener("click", e => {
@@ -1163,6 +1444,7 @@ $("clientCards").addEventListener("click", e => {
   if (t.dataset.pay) openPay(+t.dataset.pay);
   if (t.dataset.stmt) shareStatement(L.clients[+t.dataset.stmt]);
   if (t.dataset.settle) settleClient(+t.dataset.settle);
+  if (t.dataset.editgiven) { const [i, row] = t.dataset.editgiven.split(":").map(Number); openEditGiven(i, row); }
 });
 
 let payIdx = null;
@@ -1182,13 +1464,14 @@ $("pcSave").addEventListener("click", async () => {
   const dateVal = method === "cut" ? `${DEALERS[$("pcDealer").value].name.split(" ")[0]} Cut` : ($("pcDate").value ? fromIso($("pcDate").value) : today());
   $("pcSave").disabled = true;
   try {
-    await withData(S => {
-      const blk = parseClients(S.clients).find(x => normName(x.name) === normName(b.name));
+    const res = await withData(S => {
+      const blk = clientBlock(S, b.name);
       if (!blk) throw new Error(`${b.name} isn't in Payment Details any more.`);
-      const cl = S.clients, last = cl.lastRow([blk.givenCol, blk.dateCol]), r = last + 1;
-      cl.set(r, blk.givenCol, amount, last >= FIRST_DATA_ROW ? last : 0);
-      cl.set(r, blk.dateCol, dateVal, last >= FIRST_DATA_ROW ? last : 0);
+      if (dateVal instanceof Date && clientLinkRows(blk, dateVal, amount).length && !confirm(`${b.name} already has ${inr(amount)} given on ${fmtDate(dateVal)}. Add another one?`)) return { save: false, cancelled: true };
+      addClientGiven(S, blk, amount, dateVal);
+      return {};
     });
+    if (res.cancelled) { note("pcNote", "warn", "Nothing was added."); return; }
     $("dlgPayClient").close();
     note("clientNote", "ok", `✔ Recorded ${inr(amount)} given to ${esc(b.name)}${method === "cut" ? ` (${esc(dateVal)})` : ""}.`);
   } catch (e) { note("pcNote", "err", esc(e.message)); }
@@ -1217,6 +1500,59 @@ async function settleClient(i) {
     });
     note("clientNote", "ok", `✔ ${esc(b.name)} settled. Their rows are saved in the "Settled history" tab of Payment Details.`);
   } catch (e) { note("clientNote", "err", esc(e.message)); }
+}
+
+/* ---------- payment check: dealer <-> client, and duplicates ---------- */
+function renderPayCheck() {
+  if (!connected) return;
+  const issues = [];
+  for (const [k, D] of Object.entries(L.dealers)) {
+    const seen = {};
+    for (const p of D.payments || []) {
+      if (!p.date) continue;
+      const key = [isoDate(p.date), normName(p.sender), normName(p.bank), p.amount].join("|");
+      (seen[key] = seen[key] || []).push(p.row);
+      const b = clientForBank(L.clients, p.bank);
+      if (!b) continue;
+      // only the period the client still has open entries for; older ones were settled and cleared on purpose
+      const dates = b.entries.flatMap(e => [e.od, e.gdate]).filter(d => d instanceof Date);
+      if (!dates.length || p.date < new Date(Math.min(...dates))) continue;
+      const dealerSame = (D.payments || []).filter(q => q.date && sameDay(q.date, p.date) && same$(q.amount, p.amount) && bankStartsWith(q.bank, b.name)).length;
+      const clientSame = b.entries.filter(e => same$(e.given, p.amount) && sameDay(e.gdate, p.date)).length;
+      if (clientSame < dealerSame && !issues.some(x => x.kind === "missing" && x.k === k && x.row === p.row))
+        issues.push({ kind: "missing", k, row: p.row, client: b.name, date: p.date, amount: p.amount,
+          html: `${esc(DEALERS[k].name)} row ${p.row}: paid <b>${esc(b.name)}</b> ${inr(p.amount)} on ${fmtDate(p.date)}, but it's not in ${esc(b.name)}'s Clients Payments.` });
+    }
+    for (const rows of Object.values(seen)) if (rows.length > 1)
+      issues.push({ kind: "dup", id: `${shownYear()}|${k}|${rows.join(",")}`, html: `${esc(DEALERS[k].name)} rows ${rows.join(", ")} look like the same payment entered ${rows.length} times. If one is a mistake, delete it from Last 5 Payments (or the sheet).` });
+  }
+  for (const b of L.clients) {
+    const seen = {};
+    for (const e of b.entries) if (e.given !== null && e.gdate) { const key = (e.gdate instanceof Date ? isoDate(e.gdate) : String(e.gdate)) + "|" + e.given; (seen[key] = seen[key] || []).push(e.row); }
+    for (const rows of Object.values(seen)) if (rows.length > 1)
+      issues.push({ kind: "dup", id: `c|${normName(b.name)}|${rows.join(",")}`, html: `<b>${esc(b.name)}</b>: payment rows ${rows.join(", ")} have the same amount and date. Check it wasn't entered twice (Details › Edit).` });
+  }
+  let okd = []; try { okd = JSON.parse(lsGet("okdup", "[]")); } catch (e) {}
+  for (let i = issues.length - 1; i >= 0; i--) if (issues[i].id && okd.includes(issues[i].id)) issues.splice(i, 1);
+  $("payCheck").innerHTML = issues.length ? issues.map((x, i) => `<div class="note ${x.kind === "missing" ? "err" : "warn"}">${x.html}${x.kind === "missing" ? ` <button class="btn small" data-fixpay="${i}">Add to ${esc(x.client)}</button>` : ` <button class="btn small ghost" data-okdup="${i}">It's correct</button>`}</div>`).join("")
+    : `<div class="note ok">✔ All good. Every dealer payment to a client is in Clients Payments once, and nothing looks entered twice.</div>`;
+  $("payCheck").onclick = async e => {
+    if (e.target.dataset.okdup !== undefined) {
+      let okd = []; try { okd = JSON.parse(lsGet("okdup", "[]")); } catch (err) {}
+      okd.push(issues[+e.target.dataset.okdup].id); lsSet("okdup", JSON.stringify(okd)); renderPayCheck(); return;
+    }
+    const i = e.target.dataset.fixpay; if (i === undefined) return;
+    const x = issues[+i]; e.target.disabled = true;
+    try {
+      await withData(S => {
+        const blk = clientBlock(S, x.client); if (!blk) throw new Error(`${x.client} isn't in Payment Details.`);
+        const haveD = Object.keys(DEALERS).reduce((t, k) => t + (S[k] ? dealerLinkRows(S[k], blk.name, x.date, x.amount).length : 0), 0);
+        if (clientLinkRows(blk, x.date, x.amount).length >= haveD) return { save: false };
+        addClientGiven(S, blk, x.amount, x.date);
+      });
+      note("clientNote", "ok", `✔ Added ${inr(x.amount)} on ${fmtDate(x.date)} to ${esc(x.client)}'s Clients Payments.`);
+    } catch (err) { note("clientNote", "err", esc(err.message)); e.target.disabled = false; }
+  };
 }
 
 /* statement image for WhatsApp */
@@ -1320,7 +1656,7 @@ async function searchTracking() {
   const q = $("trackQ").value.trim().toUpperCase().replace(/\s+/g, "");
   if (q.length < 4) { note("trackOut", "warn", "Type at least 4 characters of the tracking ID."); return; }
   note("trackOut", "info", "Searching…");
-  try { await withData(() => ({ save: false })); } catch (e) { note("trackOut", "err", esc(e.message)); return; }
+  try { await withData(() => ({ save: false }), { reload: true }); } catch (e) { note("trackOut", "err", esc(e.message)); return; }
   const hits = [];
   for (const [k, D] of Object.entries(L.dealers)) for (const r of Object.values(D.rows))
     if (r.tracking && r.tracking.toUpperCase().replace(/\s+/g, "").includes(q)) hits.push({ dealer: k, r });
@@ -1346,7 +1682,165 @@ $("dealerSeg").addEventListener("click", e => {
   const k = e.target.dataset.dealer; if (!k || k === dealer) return;
   dealer = k; lsSet("dealer", k); renderDealerSeg(); resetOrderForm(); note("orderNote"); renderAll();
 });
-function renderAll() { renderIncomplete(); renderOfd(); renderMoney(); renderClients(); }
+/* ---------- swipe left / right to change tabs (phones + laptop trackpads) ---------- */
+const APP_VERSION = "v24.11-1";
+function goTab(dir) {
+  const tabs = [...document.querySelectorAll("nav button")], i = tabs.findIndex(b => b.classList.contains("active"));
+  const next = tabs[i + dir];
+  if (!next) return;
+  next.click();
+  next.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+  const tab = document.querySelector(".tab.active");
+  if (tab) { tab.style.animation = "none"; void tab.offsetWidth; tab.style.animation = `slide${dir > 0 ? "L" : "R"} .22s ease-out`; }
+}
+(() => {
+  let x0 = null, y0 = null, x1 = 0, y1 = 0, t0 = 0;
+  const skip = el => {
+    if (el.closest("textarea, dialog, nav")) return true;
+    const f = el.closest("input, select"); if (f && f === document.activeElement) return true;        // typing in this box
+    const sc = el.closest(".scroll, details"); return !!(sc && sc.scrollWidth > sc.clientWidth + 4);   // table that scrolls sideways
+  };
+  const finish = () => {
+    if (x0 === null) return;
+    const dx = x1 - x0, dy = y1 - y0, dt = Date.now() - t0;
+    x0 = null;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.2 || dt > 900) return;
+    goTab(dx < 0 ? 1 : -1);
+  };
+  document.addEventListener("touchstart", e => {
+    const zoomed = window.visualViewport && visualViewport.scale > 1.05;   // zoomed in: one finger pans, no tab change
+    if (e.touches.length !== 1 || zoomed || (e.target.closest && skip(e.target))) { x0 = null; return; }
+    x0 = x1 = e.touches[0].clientX; y0 = y1 = e.touches[0].clientY; t0 = Date.now();
+  }, { passive: true });
+  document.addEventListener("touchmove", e => { if (e.touches.length > 1) { x0 = null; return; } if (x0 !== null && e.touches.length === 1) { x1 = e.touches[0].clientX; y1 = e.touches[0].clientY; } }, { passive: true });
+  document.addEventListener("touchend", e => { if (x0 !== null && e.changedTouches[0]) { x1 = e.changedTouches[0].clientX; y1 = e.changedTouches[0].clientY; } finish(); }, { passive: true });
+  document.addEventListener("touchcancel", finish, { passive: true });
+  // two-finger sideways swipe on a laptop trackpad
+  let acc = 0, lock = 0;
+  document.addEventListener("wheel", e => {
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) || (e.target.closest && skip(e.target))) return;
+    const now = Date.now(); if (now < lock) return;
+    acc += e.deltaX;
+    if (Math.abs(acc) > 120) { goTab(acc > 0 ? 1 : -1); acc = 0; lock = now + 600; }
+    clearTimeout(document._wheelT); document._wheelT = setTimeout(() => { acc = 0; }, 250);
+  }, { passive: true });
+})();
+
+function renderAll() { renderIncomplete(); renderOfd(); renderMoney(); renderClients(); renderLastPays(); renderLastOrders(); renderPayCheck(); }
+
+/* ---------- last 5 dealer payments + edit ---------- */
+function renderLastPays() {
+  if (!connected) return;
+  $("lastPaysTitle").textContent = `Last 5 Payments · ${DEALERS[dealer].name}`;
+  $("lastPays").innerHTML = [[dealer, DEALERS[dealer]]].map(([k, d]) => {
+    const P = ((L.dealers[k] || {}).payments || []).slice().sort((a, b) => b.row - a.row).slice(0, 5);
+    return (P.length ? `<div class="scroll"><table class="list"><tr><th>Row</th><th>Date</th><th>Sender</th><th class="opt">Bank</th><th class="num">Amount</th><th></th></tr>` +
+      P.map(p => `<tr><td>${p.row}</td><td>${fmtDate(p.date)}</td><td>${esc(p.sender || "")}</td><td class="opt">${esc(p.bank || "")}</td><td class="num"><b>${p.amount !== null ? inr(p.amount) : ""}</b></td><td><button class="btn small ghost" data-editpay="${k}:${p.row}">Edit</button></td></tr>`).join("") + `</table></div>`
+      : `<div class="empty">No payments yet.</div>`);
+  }).join("");
+}
+let editPay = null;
+$("lastPays").addEventListener("click", e => {
+  const t = e.target.dataset.editpay; if (!t) return;
+  const [k, row] = t.split(":"); const p = L.dealers[k].payments.find(x => x.row === +row); if (!p) return;
+  editPay = { k, row: +row };
+  $("epTitle").textContent = `Edit Payment · ${DEALERS[k].name} · Row ${row}`;
+  $("epDate").value = p.date ? isoDate(p.date) : ""; $("epSender").value = p.sender || ""; $("epBank").value = p.bank || ""; $("epAmount").value = p.amount ?? "";
+  $("epNote").innerHTML = ""; $("dlgEditPay").showModal();
+});
+async function savePay(del) {
+  const { k, row } = editPay; let data = null;
+  if (!del) {
+    try { data = { date: $("epDate").value ? fromIso($("epDate").value) : null, sender: $("epSender").value.trim(), bank: $("epBank").value.trim(), amount: parseNumber($("epAmount").value) }; }
+    catch (e) { note("epNote", "err", "Enter a valid amount."); return; }
+    if (!data.date || !data.sender || !data.bank) { note("epNote", "err", "Fill in date, sender and bank."); return; }
+  } else if (!confirm(`Delete this payment from ${DEALERS[k].name}'s row ${row}?`)) return;
+  $("epSave").disabled = true;
+  try {
+    const res = await withData(S => {
+      const sh = S[k], old = { date: sh.date(row, PAYMENT_COLS.date), bank: sh.value(row, PAYMENT_COLS.bank), amount: num(sh.value(row, PAYMENT_COLS.amount)) };
+      const oldBlk = bankBlock(S, old.bank), oldLink = oldBlk ? clientLinkRows(oldBlk, old.date, old.amount) : [];
+      for (const [f, col] of Object.entries(PAYMENT_COLS)) sh.set(row, col, del ? null : data[f]);
+      if (del) { if (oldLink.length) { clearClientRow(S, oldBlk, oldLink[0]); return { link: `Also removed from ${oldBlk.name}'s Clients Payments.` }; } return {}; }
+      const newBlk = bankBlock(S, data.bank);
+      if (oldLink.length && newBlk && oldBlk.name === newBlk.name) {
+        S.clients.set(oldLink[0], newBlk.givenCol, data.amount); S.clients.set(oldLink[0], newBlk.dateCol, data.date);
+        return { link: `${newBlk.name}'s Clients Payments updated to match.` };
+      }
+      const msg = [];
+      if (oldLink.length) { clearClientRow(S, oldBlk, oldLink[0]); msg.push(`removed from ${oldBlk.name}`); }
+      if (newBlk && !clientLinkRows(newBlk, data.date, data.amount).length) { addClientGiven(S, newBlk, data.amount, data.date); msg.push(`added to ${newBlk.name}`); }
+      return { link: msg.length ? `Clients Payments: ${msg.join(", ")}.` : "" };
+    });
+    $("dlgEditPay").close();
+    note("lastPayNote", "ok", `✔ ${del ? "Deleted" : "Updated"} the payment in ${esc(DEALERS[k].name)}'s row ${row}.` + (res.link ? `<br>🔗 ${esc(res.link)}` : ""));
+  } catch (e) { note("epNote", "err", esc(e.message)); }
+  finally { $("epSave").disabled = false; }
+}
+$("epSave").addEventListener("click", () => savePay(false));
+$("epDelete").addEventListener("click", () => savePay(true));
+
+/* ---------- edit a payment given to a client ---------- */
+let editGiven = null;
+function openEditGiven(i, row) {
+  const b = L.clients[i], e = b.entries.find(x => x.row === row); if (!e) return;
+  editGiven = { name: b.name, row };
+  $("egTitle").textContent = `Edit Payment Given · ${b.name}`;
+  $("egAmount").value = e.given ?? "";
+  const isCut = e.gdate && !(e.gdate instanceof Date);
+  $("egDate").value = e.gdate instanceof Date ? isoDate(e.gdate) : "";
+  $("egDealer").innerHTML = Object.entries(DEALERS).map(([k, d]) => `<option value="${k}" ${isCut && String(e.gdate).toLowerCase().startsWith(d.name.split(" ")[0].toLowerCase()) ? "selected" : ""}>${esc(d.name)}</option>`).join("");
+  document.querySelector(`input[name=egMethod][value=${isCut ? "cut" : "paid"}]`).checked = true;
+  $("egDealerBox").style.display = isCut ? "block" : "none";
+  $("egNote").innerHTML = ""; $("dlgEditGiven").showModal();
+}
+document.querySelectorAll("input[name=egMethod]").forEach(r => r.addEventListener("change", () => { $("egDealerBox").style.display = document.querySelector("input[name=egMethod]:checked").value === "cut" ? "block" : "none"; }));
+async function saveGiven(del) {
+  const { name, row } = editGiven; let amount = null, dateVal = null;
+  if (!del) {
+    try { amount = parseNumber($("egAmount").value); } catch (e) { note("egNote", "err", "Enter a valid amount."); return; }
+    const cut = document.querySelector("input[name=egMethod]:checked").value === "cut";
+    dateVal = cut ? `${DEALERS[$("egDealer").value].name.split(" ")[0]} Cut` : ($("egDate").value ? fromIso($("egDate").value) : null);
+    if (!dateVal) { note("egNote", "err", "Pick the date."); return; }
+  } else if (!confirm(`Delete this payment given to ${name}?`)) return;
+  $("egSave").disabled = true;
+  try {
+    const res = await withData(S => {
+      const blk = clientBlock(S, name);
+      if (!blk) throw new Error(`${name} isn't in Payment Details any more.`);
+      const oldAmt = num(S.clients.value(row, blk.givenCol)), oldDate = S.clients.date(row, blk.dateCol);
+      let linked = null;   // the dealer payment this entry mirrors, if any
+      if (oldDate) for (const k of Object.keys(DEALERS)) if (S[k]) { const r = dealerLinkRows(S[k], blk.name, oldDate, oldAmt); if (r.length) { linked = { k, row: r[0] }; break; } }
+      S.clients.set(row, blk.givenCol, del ? null : amount);
+      S.clients.set(row, blk.dateCol, del ? null : dateVal);
+      if (!linked) return {};
+      if (del || !(dateVal instanceof Date)) { clearDealerRow(S, linked.k, linked.row); return { link: `Also removed from ${DEALERS[linked.k].name}'s payments (row ${linked.row}).` }; }
+      S[linked.k].set(linked.row, PAYMENT_COLS.date, dateVal); S[linked.k].set(linked.row, PAYMENT_COLS.amount, amount);
+      return { link: `${DEALERS[linked.k].name}'s payment row ${linked.row} updated to match.` };
+    });
+    $("dlgEditGiven").close();
+    note("clientNote", "ok", `✔ ${del ? "Deleted" : "Updated"} the payment given to ${esc(name)}.` + (res.link ? `<br>🔗 ${esc(res.link)}` : ""));
+  } catch (e) { note("egNote", "err", esc(e.message)); }
+  finally { $("egSave").disabled = false; }
+}
+$("egSave").addEventListener("click", () => saveGiven(false));
+$("egDelete").addEventListener("click", () => saveGiven(true));
+
+/* ---------- last 5 orders by delivery date ---------- */
+function renderLastOrders() {
+  if (!connected) return;
+  const all = [];
+  $("lastOrdersTitle").textContent = `Last 5 Orders · ${DEALERS[dealer].name}`;
+  const D = L.dealers[dealer] || { rows: {} };
+  for (const r of Object.values(D.rows)) if (r.deliveryObj) all.push({ k: dealer, r });
+  all.sort((a, b) => (b.r.deliveryObj - a.r.deliveryObj) || (b.r.row - a.r.row));
+  const top = all.slice(0, 5);
+  $("lastOrders").innerHTML = top.length ? top.map(({ k, r }, i) => `<div class="panel" style="margin:10px 0;border-left:4px solid ${i === 0 ? "var(--light)" : "var(--mid)"}">
+      <h2>${i === 0 ? "🆕 " : ""}${fmtDate(r.deliveryObj)} · Row ${r.row}</h2>
+      <table class="list">${[["Delivery Status", r.status], ["Parcel Name", r.name], ["Model", r.model || r.platform], ["Tracking ID", r.tracking], ["Card Details", r.card], ["Amount Paid By", r.paid_by], ["Amount", r.amount ? inr(num(r.amount)) : ""], ["Order Date", fmtDate(r.dateObj)]]
+        .filter(([, v]) => v).map(([l, v]) => `<tr><td style="color:#5b6866;width:38%">${l}</td><td><b>${esc(v)}</b></td></tr>`).join("")}</table></div>`).join("")
+    : `<div class="empty">No orders with a delivery date yet.</div>`;
+}
 document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => {
   document.querySelectorAll("nav button").forEach(x => x.classList.toggle("active", x === b));
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.id === "tab-" + b.dataset.tab));
@@ -1369,7 +1863,7 @@ function renderYear() {
 async function switchYear(y) {
   year = y; lsSet("year", y); resetOrderForm(); note("orderNote");
   $("fileStatus").textContent = `Loading ${y}…`;
-  try { await withData(() => ({ save: false })); setStatus(); } catch (e) { $("fileStatus").textContent = "Couldn't load: " + e.message; }
+  try { await withData(() => ({ save: false }), { reload: true }); setStatus(); } catch (e) { $("fileStatus").textContent = "Couldn't load: " + e.message; }
 }
 $("yearSel").addEventListener("change", e => switchYear(e.target.value));
 document.addEventListener("click", e => {
@@ -1382,7 +1876,7 @@ async function startYear(to) {
   note("yearNote", "info", `Creating ${to}… this can take up to a minute.`);
   try {
     const j = await api({ action: "newYear", to });
-    DATA = j.data; year = j.year; lsSet("year", year); renderYear(); learn(); setStatus();
+    DATA = j.data; DATA_SEQ++; year = j.year; lsSet("year", year); renderYear(); learn(); setStatus();
     note("yearNote", "ok", `✔ ${to} is ready. New orders now go into the ${to} sheets.`);
   } catch (e) { note("yearNote", "err", esc(e.message)); }
 }
@@ -1391,9 +1885,10 @@ function setStatus() { $("fileStatus").textContent = `Connected · ${shownYear()
 /* ======================= connect + shortcuts dialogs ======================= */
 $("btnConnect").addEventListener("click", () => { $("gUrl").value = remote ? remote.url : ""; $("gKey").value = remote ? remote.key : ""; $("gNote").innerHTML = ""; $("dlgConnect").showModal(); });
 async function connectRemote(cfg) {
+  if (!remote || remote.url !== cfg.url) forgetCopies();   // a different web app: drop this device's copies
   const j = await api({ action: "read" }, cfg);
   remote = cfg; lsSet("remote", JSON.stringify(cfg));
-  connected = true; DATA = j.data;
+  connected = true; DATA = j.data; DATA_SEQ++;
   setStatus();
   learn();
 }
@@ -1404,7 +1899,7 @@ $("gSave").addEventListener("click", async () => {
   try { await connectRemote(cfg); note("gNote", "ok", "✔ Connected."); setTimeout(() => $("dlgConnect").close(), 700); }
   catch (e) { note("gNote", "err", esc(e.message)); } finally { $("gSave").disabled = false; }
 });
-$("gDisconnect").addEventListener("click", () => { remote = null; connected = false; lsSet("remote", "null"); $("fileStatus").textContent = "Not connected"; $("dlgConnect").close(); });
+$("gDisconnect").addEventListener("click", () => { remote = null; connected = false; lsSet("remote", "null"); forgetCopies(); $("fileStatus").textContent = "Not connected"; $("dlgConnect").close(); });
 $("btnSettings").addEventListener("click", () => { $("setAddr").value = loadMap("addr", "").txt; $("setPlat").value = loadMap("plat", DEFAULT_PLATFORMS).txt; $("dlgSettings").showModal(); });
 $("saveSettings").addEventListener("click", () => { lsSet("addr", $("setAddr").value); lsSet("plat", $("setPlat").value); addrMap = loadMap("addr", "").map; platMap = loadMap("plat", DEFAULT_PLATFORMS).map; $("dlgSettings").close(); });
 document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", () => b.closest("dialog").close()));
@@ -1413,7 +1908,7 @@ document.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click
 // Reads every year folder once and builds the business dashboard.
 // Profit uses delivered orders only, same rule as the Profit tab.
 // Payment days: every order adds to what the dealer owes, every payment clears the oldest delivery first.
-const DASH = { rows: [], pays: [], left: {}, ledger: {}, names: {}, loadedAt: null, yearF: "all", dealerF: "both", metric: "net", loading: false };
+const DASH = { rows: [], pays: [], left: {}, ledger: {}, names: {}, loadedAt: null, yearF: "all", dealerF: "both", metric: "net", payDealer: "", loading: false };
 const D_DAY = 86400000;
 const D_COLORS = ["#128c7e", "#e08a00", "#5c6bc0", "#8d6e63"];
 const D_AGE = [["Up to 1 week", "#2e7d32"], ["1 to 2 weeks", "#8bb83a"], ["2 to 4 weeks", "#f0b429"], ["1 to 2 months", "#e8772e"], ["Over 2 months", "#c62828"]];
@@ -1455,7 +1950,8 @@ function dCategory(model) {
 }
 async function dashRead(y) {
   let r;
-  try { r = await fetch(remote.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "read", year: y, key: remote.key }) }); }
+  const body = JSON.stringify({ action: "read", year: y, parts: Object.keys(DEALERS), key: remote.key });   // dealer sheets only
+  try { r = await fetch(remote.url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body }); }
   catch (e) { throw new Error("Couldn't reach your Google Sheets. Check the internet connection and try again."); }
   const j = await r.json();
   if (!j.ok) throw new Error(j.error || "Google Sheets error");
@@ -1524,17 +2020,42 @@ function dashLedger() {
       lastAmt: last ? pays.filter(p => p.date === last.date).reduce((s, p) => s + p.got, 0) : 0 };
   }
 }
-async function loadDash() {
+// Past years are kept on this device (only the columns the dashboard uses, no names or addresses),
+// so opening the tab reads just the current year. Refresh reads every year again.
+const DASH_KEEP = new Set([0, 2, 5, 6, 9, 10, 13, 14, 15, 16, 18, 21, 22, 23, 24, 26]);
+function dashSlim(j) {
+  const data = {};
+  for (const dk of Object.keys(DEALERS)) {
+    const sh = j.data && j.data[dk]; if (!sh || !sh.values) continue;
+    data[dk] = { values: sh.values.map(r => (r || []).slice(0, 27).map((v, i) => !DASH_KEEP.has(i) ? "" : (i === 22 || i === 23) && !/previous year due/i.test(String(v)) ? "" : v)) };
+  }
+  return { year: j.year, data };
+}
+const dashKept = y => { try { return JSON.parse(localStorage.getItem(LS + "dash_" + y) || "null"); } catch (e) { return null; } };
+const dashKeep = j => { try { localStorage.setItem(LS + "dash_" + j.year, JSON.stringify(j)); } catch (e) {} };
+async function loadDash(force) {
   if (!remote) { $("dashBox").innerHTML = `<div class="empty">Press Connect first.</div>`; return; }
   if (DASH.loading) return; DASH.loading = true;
-  $("dashBox").innerHTML = `<div class="empty">Reading every year's sheets…</div>`;
+  $("dashBox").innerHTML = `<div class="empty">Reading your sheets…</div>`;
   try {
+    let years = (typeof YEARS !== "undefined" && YEARS && YEARS.length) ? YEARS.slice() : null, first = null;
+    if (!years) { const j0 = await dashRead(""); first = dashSlim(j0); years = j0.years || [j0.year]; }
+    years = years.slice().sort();
+    const latest = years[years.length - 1];
+    let done = 0;
+    const one = async y => {
+      if (first && first.year === y) return first;
+      const kept = !force && y !== latest ? dashKept(y) : null;
+      if (kept) return kept;
+      const j = dashSlim(await dashRead(y));
+      if (y !== latest) dashKeep(j);
+      done++; $("dashBox").innerHTML = `<div class="empty">Reading your sheets… ${done} done</div>`;
+      return j;
+    };
+    const all = await Promise.all(years.map(one));   // every year at the same time
     DASH.rows = []; DASH.pays = []; DASH.left = {};
-    const first = await dashRead("");
-    const years = first.years || [first.year];
-    dashTake(first);
-    for (const y of years) if (y !== first.year) { $("dashBox").innerHTML = `<div class="empty">Reading ${esc(y)}…</div>`; dashTake(await dashRead(y)); }
-    DASH.years = years.slice().sort(); DASH.loadedAt = new Date();
+    all.forEach(dashTake);
+    DASH.years = years; DASH.loadedAt = new Date();
     dashNames(); dashLedger(); renderDash();
   } catch (e) { $("dashBox").innerHTML = `<div class="note err">${esc(e.message)}</div>`; }
   finally { DASH.loading = false; }
@@ -1630,6 +2151,61 @@ function agingRow(dk) {
     <div class="dage">${L.age.map((v, i) => v > 0 ? `<span title="${D_AGE[i][0]}: ${inr(v)}" style="width:${(v / tot * 100).toFixed(1)}%;background:${D_AGE[i][1]}"></span>` : "").join("")}</div>
     <div class="dlegend">${L.age.map((v, i) => v > 0 ? `<span><i style="background:${D_AGE[i][1]}"></i>${D_AGE[i][0]}: <b>${inr(v)}</b></span>` : "").join("")}</div></div>`;
 }
+const dBand = v => v <= 7 ? 0 : v <= 15 ? 1 : v <= 30 ? 2 : v <= 60 ? 3 : 4;
+const D_INK = ["#2e7d32", "#4f7d12", "#b26a00", "#c4510f", "#c62828"];
+function payYears(dk) {
+  const R = DASH.rows.filter(r => r.dealer === dk && isDelivered(r));
+  const billed = R.filter(r => r.billDay && r.amount + r.com > 0);
+  if (!billed.length) return `<div class="empty">No deliveries for ${esc(DEALERS[dk].name)} yet.</div>`;
+  const now = dToday().slice(0, 7), first = billed.map(r => r.billDay).sort()[0].slice(0, 7);
+  const months = []; for (let t = new Date(+first.slice(0, 4), +first.slice(5, 7) - 1, 1); dIso(t).slice(0, 7) <= now; t = new Date(t.getFullYear(), t.getMonth() + 1, 1)) months.push(dIso(t).slice(0, 7));
+  const mAvg = Object.fromEntries(months.map(m => [m, payStats(R.filter(r => (r.billDay || "").slice(0, 7) === m)).avg]));
+  const years = DASH.years.filter(y => R.some(r => (r.date || "").slice(0, 4) === y));
+  const Y = years.map(y => {
+    const rs = R.filter(r => (r.date || "").slice(0, 4) === y), s = payStats(rs);
+    const ms = months.filter(m => m.startsWith(y) && mAvg[m] !== null), slow = ms.sort((a, b) => mAvg[b] - mAvg[a])[0];
+    return { y, avg: s.avg, fast: s.fast, orders: rs.length, billed: rs.reduce((t, r) => t + r.amount + r.com, 0), slow, owed: (DASH.left[dk] || {})[y] };
+  });
+  const latest = DASH.years[DASH.years.length - 1];
+  const cards = Y.map((o, i) => {
+    const prev = i ? Y[i - 1].avg : null, ch = o.avg !== null && prev !== null ? Math.round(o.avg) - Math.round(prev) : null;
+    return `<div class="dyc"><div class="lbl">${o.y}${o.y === latest ? " (so far)" : ""}</div>
+      <div class="val" style="color:${o.avg === null ? "inherit" : D_INK[dBand(o.avg)]}">${dDaysTxt(o.avg)}</div>
+      <div class="sub">${o.fast === null ? "-" : o.fast.toFixed(0) + "%"} paid within 15 days</div>
+      ${ch === null || ch === 0 ? "" : `<span class="dchg ${ch > 0 ? "slower" : "faster"}">${ch > 0 ? "+" : "−"}${Math.abs(ch)} days</span>`}</div>`;
+  }).join("");
+  const table = `<div class="dscroll"><table class="list dtable"><tr><th>Year</th><th class="num">Orders delivered</th><th class="num">Money billed</th><th class="num">Days to pay</th><th class="num">Paid within 15 days</th><th>Slowest month</th><th class="num">Owed at year end</th></tr>
+    ${Y.map(o => `<tr><td><b>${o.y}</b></td><td class="num">${dCount(o.orders)}</td><td class="num">${inr(o.billed)}</td>
+      <td class="num" style="font-weight:800;color:${o.avg === null ? "inherit" : D_INK[dBand(o.avg)]}">${dDaysTxt(o.avg)}</td>
+      <td class="num">${o.fast === null ? "-" : o.fast.toFixed(0) + "%"}</td>
+      <td>${o.slow ? `${dMonthLab(o.slow, false).slice(0, 3)} (${Math.round(mAvg[o.slow])} days)` : "-"}</td>
+      <td class="num">${o.owed === undefined ? "-" : inr(o.owed)}${o.y === latest ? ` <span class="dsmall">now</span>` : ""}</td></tr>`).join("")}</table></div>`;
+  // month by month across all years, coloured by how long payment took
+  const vals = months.map(m => mAvg[m]), top = Math.max(60, ...vals.filter(v => v !== null).map(v => Math.ceil(v / 10) * 10 + 5));
+  const W = Math.max(640, months.length * 16 + 50), H = 280, L0 = 34, T = 30, B = 30, pw = W - L0 - 6, ph = H - T - B, bw = pw / months.length;
+  const yv = v => T + ph - v / top * ph;
+  let svg = "";
+  years.forEach((y, yi) => {
+    const idx = months.map((m, i) => m.startsWith(y) ? i : -1).filter(i => i >= 0); if (!idx.length) return;
+    const x0 = L0 + idx[0] * bw, x1 = L0 + (idx[idx.length - 1] + 1) * bw, o = Y.find(q => q.y === y);
+    if (yi % 2 === 0) svg += `<rect x="${x0.toFixed(1)}" y="${T - 22}" width="${(x1 - x0).toFixed(1)}" height="${ph + 22}" fill="#f4f7f6"></rect>`;
+    svg += `<text class="dyl" x="${((x0 + x1) / 2).toFixed(1)}" y="${T - 8}" text-anchor="middle">${y}${o && o.avg !== null ? ` · avg ${Math.round(o.avg)} days` : ""}</text>`;
+    if (o && o.avg !== null) svg += `<line x1="${(x0 + 2).toFixed(1)}" x2="${(x1 - 2).toFixed(1)}" y1="${yv(o.avg).toFixed(1)}" y2="${yv(o.avg).toFixed(1)}" stroke="#075e54" stroke-width="1.3" stroke-dasharray="5 4" opacity=".7"></line>`;
+  });
+  [15, 30, 60].filter(g => g < top).forEach(g => { svg += `<line x1="${L0}" x2="${W - 6}" y1="${yv(g).toFixed(1)}" y2="${yv(g).toFixed(1)}" stroke="#d7dddb"></line><text x="${L0 - 5}" y="${(yv(g) + 3.5).toFixed(1)}" text-anchor="end">${g}d</text>`; });
+  months.forEach((m, i) => {
+    const v = vals[i], x = L0 + i * bw + bw * 0.14, w = bw * 0.72, mi = +m.slice(5, 7);
+    if (v !== null) svg += `<g${i === months.length - 1 ? ` opacity=".45"` : ""}><title>Delivered ${dMonthLab(m)}: ${dDaysTxt(v)}</title><rect x="${x.toFixed(1)}" y="${yv(v).toFixed(1)}" width="${w.toFixed(1)}" height="${(yv(0) - yv(v)).toFixed(1)}" rx="2" fill="${D_AGE[dBand(v)][1]}"></rect>
+      <text class="dv" x="${(x + w / 2).toFixed(1)}" y="${(yv(v) - 3).toFixed(1)}" text-anchor="middle">${Math.round(v)}</text></g>`;
+    if (mi % 3 === 0) svg += `<text x="${(L0 + i * bw + bw / 2).toFixed(1)}" y="${H - B + 14}" text-anchor="middle">${dMonthLab(m).slice(0, 3)}</text>`;
+  });
+  svg += `<line x1="${L0}" x2="${W - 6}" y1="${yv(0).toFixed(1)}" y2="${yv(0).toFixed(1)}" stroke="#9fb0ac"></line>`;
+  const legend = `<div class="dlegend">${D_AGE.map(([l, c]) => `<span><i style="background:${c}"></i>${l}</span>`).join("")}<span><i class="dash"></i>Year average</span></div>`;
+  return `<div class="dycards">${cards}</div>${table}
+    <h3 class="dh">Days to get paid, every month since the start</h3>${legend}
+    <div class="dscroll"><svg class="dchart dwide" viewBox="0 0 ${W} ${H}" style="min-width:${Math.min(W, 900)}px" role="img" aria-label="Days to get paid by delivery month">${svg}</svg></div>
+    <p class="hint">Each bar is the deliveries of one month and how many days their money took to come in. The last month is still counting. Owed at year end is the LEFT cell of each year's sheet.</p>`;
+}
 function renderDash() {
   const rows = dashFilter(), tot = dTotal(rows), ps = payStats(rows);
   const latest = DASH.years[DASH.years.length - 1], today = dToday();
@@ -1646,6 +2222,7 @@ function renderDash() {
   const shipDays = p => { const d = rows.filter(r => (r.platform || "Not recorded") === p && !r.est && r.del && r.date).map(r => dDays(r.date, r.del)).filter(x => x >= 0 && x <= 60); return d.length ? d.reduce((s, x) => s + x, 0) / d.length : null; };
   const chip = (v, lab, cur, attr) => `<button class="dchip${v === cur ? " on" : ""}" data-${attr}="${v}">${lab}</button>`;
   const period = DASH.yearF === "all" ? "all years" : DASH.yearF;
+  const payDk = DASH.payDealer || (DASH.dealerF !== "both" ? DASH.dealerF : Object.keys(DEALERS)[0]);
   $("dashBox").innerHTML = `
     <div class="dfilters">${chip("all", "All years", DASH.yearF, "dy")}${DASH.years.map(y => chip(y, y, DASH.yearF, "dy")).join("")}</div>
     <div class="dfilters">${chip("both", "Both dealers", DASH.dealerF, "dd")}${Object.keys(DEALERS).map(dk => chip(dk, esc(DEALERS[dk].name.split(" ")[0]), DASH.dealerF, "dd")).join("")}</div>
@@ -1675,6 +2252,11 @@ function renderDash() {
       <p class="hint">Each payment is counted against the oldest delivery first. Deliveries not paid yet count the days waited so far. Lower is better.</p>
     </div>
 
+    <div class="dsec"><h3 class="dh">Payment speed, year by year</h3>
+      <div class="dfilters">${Object.keys(DEALERS).map(dk => chip(dk, esc(DEALERS[dk].name.split(" ")[0]), payDk, "dp")).join("")}</div>
+      ${payYears(payDk)}
+    </div>
+
     <div class="dsec"><div class="dgrid">
       <div><h3 class="dh">Best earning models</h3>${best.length ? hbars(best, t => inr(t.net), t => ` · ${dPl(t.units, "item")}`) : `<div class="empty">Nothing yet.</div>`}</div>
       <div><h3 class="dh">Profit by brand</h3>${hbars(brands, t => inr(t.net), t => ` · ${inr(t.units ? t.net / t.units : 0)}/item`)}
@@ -1691,17 +2273,19 @@ function renderDash() {
     <p class="hint">Updated ${DASH.loadedAt.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}. Profit counts delivered orders only, by order date. "Owes now" is the LEFT cell in each ${esc(latest)} sheet.</p>`;
 }
 $("dashBox").addEventListener("click", e => {
-  const y = e.target.closest("[data-dy]"), d = e.target.closest("[data-dd]"), m = e.target.closest("[data-dm]");
+  const y = e.target.closest("[data-dy]"), d = e.target.closest("[data-dd]"), m = e.target.closest("[data-dm]"), p = e.target.closest("[data-dp]");
   if (y) DASH.yearF = y.dataset.dy;
-  if (d) DASH.dealerF = d.dataset.dd;
+  if (d) { DASH.dealerF = d.dataset.dd; if (DASH.dealerF !== "both") DASH.payDealer = DASH.dealerF; }
   if (m) DASH.metric = m.dataset.dm;
-  if (y || d || m) renderDash();
+  if (p) DASH.payDealer = p.dataset.dp;
+  if (y || d || m || p) renderDash();
 });
-$("btnDash").addEventListener("click", loadDash);
+$("btnDash").addEventListener("click", () => loadDash(true));
 document.querySelector('nav [data-tab="dash"]').addEventListener("click", () => { if (!DASH.loadedAt && !DASH.loading) loadDash(); });
 
 /* ======================= start ======================= */
 renderDealerSeg(); resetOrderForm(); resetPayForm(); refreshDatalists();
+$("ver").textContent = "· " + APP_VERSION;
 (async () => {
   const m = location.hash.match(/connect=([^&]+)/);
   if (m) {
@@ -1709,8 +2293,20 @@ renderDealerSeg(); resetOrderForm(); resetPayForm(); refreshDatalists();
     history.replaceState(null, "", location.pathname);
   }
   if (remote) {
-    $("fileStatus").textContent = "Connecting to Google Sheets…";
-    try { await connectRemote(remote); } catch (e) { $("fileStatus").textContent = "Couldn't load: " + e.message; }
+    // Open instantly with the copy kept on this device, then refresh from the sheets.
+    const copy = keptCopy();
+    if (copy && copy.data && (!year || copy.year === year)) {
+      DATA = copy.data; DATA_YEAR = copy.year;
+      if (copy.years) { YEARS = copy.years; MISSING = copy.missing || []; renderYear(); }
+      connected = true; learn();
+      $("fileStatus").textContent = `Showing your copy from ${new Date(copy.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })} · updating…`;
+    } else $("fileStatus").textContent = "Connecting to Google Sheets…";
+    const seq = DATA_SEQ;
+    try {
+      const j = await api({ action: "read" });
+      if (DATA_SEQ === seq) { DATA = j.data; DATA_SEQ++; connected = true; learn(); }
+      setStatus();
+    } catch (e) { $("fileStatus").textContent = (copy ? "Showing your saved copy. " : "") + "Couldn't load: " + e.message; }
   }
 })();
 window.__test = { parseOfdMessage, parseClients, RemoteSheet, get L() { return L; } };
