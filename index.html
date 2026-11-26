@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Digital Den · Order Logger</title>
 <style>
   :root { --dark:#075e54; --mid:#128c7e; --light:#25d366; --bg:#eef1f0; --line:#d7dddb; --err:#c62828; --ok:#2e7d32; --warn:#b26a00; }
@@ -74,9 +77,9 @@
   .btn.ghost { background:#e3e9e7; color:#2b3a37; }
   .btn.warn { background:#fb8c00; }
   .btn.small { padding:6px 12px; font-size:13.5px; }
-  .btn.trkadd { background:var(--light); color:#fff; }
+  .btn.trkadd { background:var(--mid); color:#fff; }
   .incinfo .pkgname { font-size:13.5px; color:#2b3a37; font-weight:600; }
-  .incinfo .trk { font-weight:800; color:var(--dark); background:#d9fdd3; padding:1px 6px; border-radius:5px; }
+  .incinfo .trk { font-weight:800; color:#1565c0; }
   .btn:disabled { opacity:.5; cursor:default; }
   .note { border-radius:8px; padding:9px 12px; margin-top:10px; font-size:14px; }
   .note.ok { background:#e8f5e9; color:var(--ok); } .note.err { background:#fdecea; color:var(--err); } .note.warn { background:#fff4e0; color:var(--warn); } .note.info { background:#e7f3f8; color:#0c5f7a; }
@@ -1686,7 +1689,7 @@ $("dealerSeg").addEventListener("click", e => {
   dealer = k; lsSet("dealer", k); renderDealerSeg(); resetOrderForm(); note("orderNote"); renderAll();
 });
 /* ---------- swipe left / right to change tabs (phones + laptop trackpads) ---------- */
-const APP_VERSION = "v24.11-1";
+const APP_VERSION = "v26.11-2";
 function goTab(dir) {
   const tabs = [...document.querySelectorAll("nav button")], i = tabs.findIndex(b => b.classList.contains("active"));
   const next = tabs[i + dir];
