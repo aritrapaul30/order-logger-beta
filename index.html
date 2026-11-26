@@ -74,6 +74,9 @@
   .btn.ghost { background:#e3e9e7; color:#2b3a37; }
   .btn.warn { background:#fb8c00; }
   .btn.small { padding:6px 12px; font-size:13.5px; }
+  .btn.trkadd { background:var(--light); color:#fff; }
+  .incinfo .pkgname { font-size:13.5px; color:#2b3a37; font-weight:600; }
+  .incinfo .trk { font-weight:800; color:var(--dark); background:#d9fdd3; padding:1px 6px; border-radius:5px; }
   .btn:disabled { opacity:.5; cursor:default; }
   .note { border-radius:8px; padding:9px 12px; margin-top:10px; font-size:14px; }
   .note.ok { background:#e8f5e9; color:var(--ok); } .note.err { background:#fdecea; color:var(--err); } .note.warn { background:#fff4e0; color:var(--warn); } .note.info { background:#e7f3f8; color:#0c5f7a; }
@@ -1116,16 +1119,16 @@ function renderIncomplete(cands = []) {
     return `<div class="incrow ${on ? "sel" : ""} ${cands.includes(r.row) ? "cand" : ""}" data-row="${r.row}">
       <input type="checkbox" class="tick" data-tick="${r.row}" ${on ? "checked" : ""} title="Same package: tick every row in it">
       <span class="rowno">Row ${r.row}</span>
-      <div class="incinfo"><b>${esc(r.model || r.platform || "No model")}</b> · ₹${esc(r.amount || "-")}<br>
-        <span class="sub">${fmtDate(r.dateObj)}${days !== null ? ` (${days}d ago)` : ""} · ${esc(r.by || "")} · ${esc(r.card || "no card")}${r.tracking ? " · " + esc(r.tracking) : ""}</span></div>
-      <button class="btn small ghost" data-addtrack="${r.row}" title="Add tracking ID now">+ Tracking</button>
+      <div class="incinfo"><b>${esc(r.model || r.platform || "No model")}</b> · ₹${esc(r.amount || "-")}${r.name ? `<br><span class="pkgname">📦 ${esc(r.name)}</span>` : ""}<br>
+        <span class="sub">${fmtDate(r.dateObj)}${days !== null ? ` (${days}d ago)` : ""} · ${esc(r.by || "")} · ${esc(r.card || "no card")}${r.tracking ? ` · <span class="trk">${esc(r.tracking)}</span>` : ""}</span></div>
+      <button class="btn small ${r.tracking ? "ghost" : "trkadd"}" data-addtrack="${r.row}" data-cur="${esc(r.tracking || "")}" title="${r.tracking ? "Edit tracking ID" : "Add tracking ID now"}">+ Tracking</button>
     </div>`; }).join("");
 }
 $("incList").addEventListener("click", async e => {
   const t = e.target.closest("[data-addtrack]");
   if (t) {
     e.stopPropagation();
-    const n = +t.dataset.addtrack, id = prompt(`Tracking ID for row ${n}:`);
+    const n = +t.dataset.addtrack, id = prompt(`Tracking ID for row ${n}:`, t.dataset.cur || "");
     if (!id || !id.trim()) return;
     try {
       await withData(S => {
