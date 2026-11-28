@@ -464,7 +464,8 @@ const ORDER_FIELDS = [   // [key, label, type, required, wide]   manual details 
 const MSG_FIELDS = new Set(["name", "mobile", "pin", "tracking", "delivery_date", "address"]);
 const PAY_FIELDS = [["date", "Payment Date", "date", true], ["sender", "Sender", "text", true], ["bank", "Bank", "text", true], ["amount", "Amount Got", "number", true]];
 const NO_LIST = new Set(["date", "delivery_date", "qty", "pin", "tracking", "mobile", "commission", "have_to_return"]);
-const DEFAULT_LISTS = { status: [ORDERED, OFD, DELIVERED, "Returned", "Cancelled"], platform: ["Flipkart", "Amazon", "Rupay Transaction"] };
+const DEFAULT_LISTS = { status: [ORDERED, OFD, DELIVERED, "Returned", "Cancelled"], platform: ["Flipkart", "Amazon", "Rupay Transaction", "Offline Transaction"] };
+const NO_DELIVERY_RE = /rupay|offline/i;   // no parcel: delivered on the order date
 const LABELS = Object.fromEntries(ORDER_FIELDS.map(f => [f[0], f[1]]));
 const ALIASES = {
   date:"date", orderdate:"date", by:"by", placedby:"by", platform:"platform", name:"name", parcelname:"name", nameofparcel:"name", nameofpercel:"name",
@@ -853,6 +854,7 @@ let ticked = new Set();    // other rows in the same package (same message, diff
 let pkgQty = 0;            // phones in the package, from the message
 let editOrig = null;       // that row's values when loaded
 let trioOrder = [];
+let autoDelivered = null;   // { date } when the form was auto-set, else null
 
 function setField(k, v, lock = false) {
   if (v === undefined || v === null || v === "") return;
@@ -879,7 +881,7 @@ function resetOrderForm(keepPaste) {
   field("o.", "status").value = ORDERED;
   field("o.", "qty").value = "1";
   if (!keepPaste) { $("pasteBox").value = ""; $("pasteNote").innerHTML = ""; }
-  trioOrder = []; editRow = null; editOrig = null; ticked = new Set(); pkgQty = 0;
+  trioOrder = []; editRow = null; editOrig = null; ticked = new Set(); pkgQty = 0; autoDelivered = null;
   if (!keepPaste) forceReq.clear();
   updateMode(); markMissing();
 }
@@ -958,6 +960,24 @@ function fillMobile(raw, lock) {
 field("o.", "pin").addEventListener("change", () => { const w = applyPin(); if (w) note("pasteNote", "warn", w); });
 field("o.", "by").addEventListener("change", () => { const v = field("o.", "by").value.trim(); if (!field("o.", "paid_by").value && L.paidByFor[v]) setField("paid_by", L.paidByFor[v]); });
 field("o.", "card").addEventListener("change", () => { const v = field("o.", "card").value.trim(); if (!field("o.", "paid_by").value && L.paidByForCard[v]) setField("paid_by", L.paidByForCard[v]); });
+/* Rupay / Offline transaction: no parcel, so preload Delivered with delivery date = order date.
+   Only touches what it filled itself; switching the platform back undoes it. */
+function applyNoDelivery() {
+  const st = field("o.", "status"), dd = field("o.", "delivery_date"), od = field("o.", "date").value;
+  if (NO_DELIVERY_RE.test(field("o.", "platform").value)) {
+    if (!autoDelivered && (!st.value || st.value === ORDERED)) {
+      st.value = DELIVERED; $("f-o.status").classList.add("filled");
+      if (!dd.value && od) { dd.value = od; $("f-o.delivery_date").classList.add("filled"); }
+      autoDelivered = { date: dd.value };
+    } else if (autoDelivered && dd.value === autoDelivered.date && od) { dd.value = od; autoDelivered.date = od; }
+  } else if (autoDelivered) {
+    if (st.value === DELIVERED) st.value = ORDERED;
+    if (dd.value === autoDelivered.date) { dd.value = ""; $("f-o.delivery_date").classList.remove("filled"); }
+    autoDelivered = null;
+  }
+  markMissing();
+}
+for (const ev of ["input", "change"]) { field("o.", "platform").addEventListener(ev, applyNoDelivery); field("o.", "date").addEventListener(ev, applyNoDelivery); }
 field("o.", "tracking").addEventListener("change", () => { if (!field("o.", "platform").value) setField("platform", guessPlatform(field("o.", "tracking").value)); });
 field("o.", "address").addEventListener("change", () => { const a = field("o.", "address"); if (addrMap[a.value.trim().toUpperCase()]) a.value = addrMap[a.value.trim().toUpperCase()]; });
 field("o.", "mobile").addEventListener("change", () => {
@@ -1024,7 +1044,7 @@ function applyPaste() {
   if (data.mobile) { const r = resolveMobile(data.mobile, field("o.", "name").value); if (!r.full) forceReq.set("mobile", r.choices ? "pick one of the saved numbers or type the full number" : "no saved number matched, type the full 10-digit number"); if (r.none) pasteIssues.push({ what: r.digits.length >= 3 && r.digits.length <= 6 ? "Phone: no saved number ends in these digits" : "Phone: odd format", value: data.mobile }); }
   if (data.pin) { const pd = data.pin.replace(/\D/g, ""); if (!/^\d{6}$/.test(data.pin.trim())) pasteIssues.push({ what: "Pin code: odd format", value: data.pin }); else if (!L.pinAddr[pd] && !(hist["o.address"] || []).some(a => a.includes(pd)) && !Object.values(addrMap).some(a => a.includes(pd))) pasteIssues.push({ what: "Pin code: no saved address", value: data.pin }); }
   if (data.pin && !field("o.", "address").value.trim()) forceReq.set("address", "no saved address for this pin, type it once");
-  if (!/rupay/i.test(field("o.", "platform").value)) for (const [k, l] of [["name", "Parcel Name"], ["tracking", "Tracking ID"], ["mobile", "Phone No"]])
+  if (!NO_DELIVERY_RE.test(field("o.", "platform").value)) for (const [k, l] of [["name", "Parcel Name"], ["tracking", "Tracking ID"], ["mobile", "Phone No"]])
     if (!data[k] && !field("o.", k).value.trim() && !forceReq.has(k)) { forceReq.set(k, "not in the message, type it in"); pasteIssues.push({ what: `${l} missing in message`, value: data.name || data.tracking || "" }); }
   const w = applyPin(); if (w) notes.push({ kind: "warn", html: w });
   if (!field("o.", "platform").value) setField("platform", guessPlatform(data.tracking));
@@ -1100,7 +1120,7 @@ function markMissing() {
   for (const [k] of ORDER_FIELDS) $("f-o." + k).classList.remove("missing", "force");
   for (const k of forceReq.keys()) if (!field("o.", k).value.trim()) $("f-o." + k).classList.add("missing", "force");
   if (!editRow) return;
-  const rupay = /rupay/i.test(field("o.", "platform").value);
+  const rupay = NO_DELIVERY_RE.test(field("o.", "platform").value);
   for (const k of NEEDED) {
     if (rupay && ["model", "name", "mobile", "tracking", "address"].includes(k)) continue;
     if (!field("o.", k).value.trim()) $("f-o." + k).classList.add("missing");
@@ -1174,7 +1194,7 @@ function readOrderForm() {
       else data[k] = raw;
     } catch (e) { problems.push(`${label}: ${e.message}`); }
   }
-  const rupay = /rupay/i.test(data.platform || "");
+  const rupay = NO_DELIVERY_RE.test(data.platform || "");
   const st = String(data.status || "").toLowerCase();
   if (!rupay && !data.model) problems.push("Model is empty");
   if (!rupay && ["out for delivery", "delivered"].includes(st) && !data.name) problems.push("Parcel name is empty (needed once it's out for delivery)");
@@ -1689,7 +1709,7 @@ $("dealerSeg").addEventListener("click", e => {
   dealer = k; lsSet("dealer", k); renderDealerSeg(); resetOrderForm(); note("orderNote"); renderAll();
 });
 /* ---------- swipe left / right to change tabs (phones + laptop trackpads) ---------- */
-const APP_VERSION = "v26.11-2";
+const APP_VERSION = "v28.11-1";
 function goTab(dir) {
   const tabs = [...document.querySelectorAll("nav button")], i = tabs.findIndex(b => b.classList.contains("active"));
   const next = tabs[i + dir];
